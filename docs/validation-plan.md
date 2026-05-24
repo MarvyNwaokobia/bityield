@@ -36,6 +36,18 @@ Does not qualify:
 
 ## Research rounds
 
+### Week 1 — Completed
+
+Ecosystem discovery across three evidence source types: market research (BTC holder demand and BTCFi adoption data), protocol data (live TVL, yield rates, and depositor behavior on Stacks), and community friction signals (ecosystem product launches and roadmap language pointing to the same gap).
+
+Key finding: the consumer layer is missing, not the infrastructure. Yield is live, audited, and holding hundreds of millions in TVL. The barrier is that the moment a non-technical BTC holder tries to act on their interest, the first step breaks them.
+
+Wedge identified for Week 2: opportunity framing and resonance testing with non-technical BTC holders. 73% of BTC holders want yield. The question is which words make acting on that desire feel obvious rather than risky.
+
+See docs/week1-discovery.md for the full log.
+
+---
+
 Round 1: Discovery interviews, Week 1 to 2
 Goal: understand the real hesitation, not the stated hesitation
 Method: 30-minute video calls with 10 to 15 participants

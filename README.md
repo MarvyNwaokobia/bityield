@@ -4,7 +4,7 @@
 
 [![Built on Stacks](https://img.shields.io/badge/Built%20on-Stacks-orange)](https://stacks.co)
 [![Asset](https://img.shields.io/badge/Asset-sBTC-yellow)](https://stacks.co/sbtc)
-[![Stage](https://img.shields.io/badge/Stage-Validation-blue)](#validation)
+[![Stage](https://img.shields.io/badge/Active-Stacks%20Foundry%3A%20Validate%20Cohort%20May%E2%80%93June%202026-blue)](#validation)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
 ---
@@ -161,8 +161,9 @@ Frontend pages:
 
 ## Validation
 
-BitYield is applying to Stacks Foundry: Validate, a 5-week program by
-the Stacks Endowment for early-stage builders. See stacksendowment.co/validate.
+BitYield has been accepted into Stacks Foundry: Validate, a 5-week program by
+the Stacks Endowment for early-stage builders. The project is now in active
+Week 1 discovery.
 
 Core assumption being tested:
 
@@ -262,4 +263,4 @@ MIT
 ---
 
 *Built on Stacks — Bitcoin's leading L2*
-*Applying to Stacks Foundry: Validate — stacksendowment.co/validate*
+*Active in Stacks Foundry: Validate — May–June 2026*
