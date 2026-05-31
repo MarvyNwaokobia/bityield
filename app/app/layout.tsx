@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BitYield — Bitcoin Yield on Stacks",
+  title: "BitYield — Your Bitcoin Should Be Earning",
   description:
-    "One-tap Bitcoin yield for every BTC holder. Connect your wallet and put your Bitcoin to work on Stacks in under two minutes.",
+    "Bitcoin holders are earning up to 5% annually — in Bitcoin — without selling, without bridges, without complexity. Join the waitlist.",
 };
 
 export default function RootLayout({
@@ -26,9 +26,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
