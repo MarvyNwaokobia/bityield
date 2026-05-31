@@ -39,12 +39,13 @@ export default function Home() {
       {/* ── Hero ── */}
       <section className="pt-36 pb-24 px-6 text-center max-w-4xl mx-auto">
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-6">
-          Your Bitcoin is doing nothing.{' '}
-          <span className="text-[#F7931A]">It doesn&apos;t have to.</span>
+          Hold Bitcoin.{' '}
+          <span className="text-[#F7931A]">Earn Bitcoin.</span>
         </h1>
         <p className="text-xl md:text-2xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Bitcoin holders are earning up to 5% annually — in Bitcoin — without selling,
-          without bridges, without complexity. One tap. Your Bitcoin stays Bitcoin.
+          Connect your Bitcoin wallet. See live yield rates across real protocols.
+          Press one button — your Bitcoin earns up to 5% APY, paid in Bitcoin,
+          without wrapping, without bridges, without touching a new token.
         </p>
         <a
           href="#waitlist"
@@ -134,7 +135,7 @@ export default function Home() {
           </p>
           <WaitlistForm />
           <p className="text-sm text-zinc-600 mt-5">
-            No spam. No noise. One email when it is ready.
+            One email when it is ready.
           </p>
         </div>
       </section>
