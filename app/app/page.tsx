@@ -43,9 +43,7 @@ export default function Home() {
           <span className="text-[#F7931A]">Earn Bitcoin.</span>
         </h1>
         <p className="text-xl md:text-2xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-          Connect your Bitcoin wallet. See live yield rates across real protocols.
-          Press one button — your Bitcoin earns up to 5% APY, paid in Bitcoin,
-          without wrapping, without bridges, without touching a new token.
+          Your idle Bitcoin earns up to 5% APY — paid in Bitcoin, not tokens. One tap.
         </p>
         <a
           href="#waitlist"
@@ -118,10 +116,7 @@ export default function Home() {
       {/* ── Who It&apos;s For ── */}
       <section className="py-20 px-6 max-w-3xl mx-auto text-center">
         <p className="text-xl md:text-2xl text-zinc-300 leading-relaxed">
-          You bought Bitcoin. You held it. You watched it grow. But it has been sitting
-          in a wallet doing nothing for years. BitYield is built for you — not for traders,
-          not for DeFi natives, not for people who enjoy reading whitepapers. Just Bitcoin
-          holders who want their Bitcoin to work harder.
+          BitYield is built for Bitcoin holders who want their Bitcoin to work harder.
         </p>
       </section>
 
