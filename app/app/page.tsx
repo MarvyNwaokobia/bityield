@@ -1,5 +1,3 @@
-import WaitlistForm from './components/WaitlistForm';
-
 const PROBLEM_CARDS = [
   '"$1.3 trillion in Bitcoin is sitting completely idle right now."',
   '"73% of Bitcoin holders want yield. 77% have never tried."',
@@ -128,7 +126,14 @@ export default function Home() {
             BitYield is in active development. Join the waitlist and be among the first
             Bitcoin holders to put their BTC to work.
           </p>
-          <WaitlistForm />
+          <a
+            href="https://forms.gle/fGRZPzYvTzybdv8cA"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block bg-[#F7931A] text-black font-bold px-10 py-5 rounded-xl text-lg hover:bg-[#e8841a] transition-colors w-full sm:w-auto"
+          >
+            Join the Waitlist
+          </a>
           <p className="text-sm text-zinc-600 mt-5">
             One email when it is ready.
           </p>
