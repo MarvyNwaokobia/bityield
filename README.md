@@ -2,6 +2,8 @@
 
 > One-tap Bitcoin yield for every BTC holder. Built on Stacks.
 
+**Live:** https://bityield-tau.vercel.app
+
 [![Built on Stacks](https://img.shields.io/badge/Built%20on-Stacks-orange)](https://stacks.co)
 [![Asset](https://img.shields.io/badge/Asset-sBTC-yellow)](https://stacks.co/sbtc)
 [![Stage](https://img.shields.io/badge/Active-Stacks%20Foundry%3A%20Validate%20Cohort%20May%E2%80%93June%202026-blue)](#validation)
