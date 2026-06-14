@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ConnectWalletButton } from './components/ConnectWalletButton';
 
 const PROBLEM_CARDS = [
   '"$1.3 trillion in Bitcoin is sitting completely idle right now."',
@@ -30,11 +31,18 @@ export default function Home() {
         </span>
         <div className="flex items-center gap-4">
           <Link
+            href="/dashboard"
+            className="text-sm text-zinc-400 hover:text-white transition-colors"
+          >
+            Dashboard
+          </Link>
+          <Link
             href="/deposit"
             className="text-sm text-zinc-400 hover:text-white transition-colors"
           >
             Try the Demo
           </Link>
+          <ConnectWalletButton />
           <a
             href="#waitlist"
             className="bg-[#F7931A] text-black font-semibold px-5 py-2 rounded-lg text-sm hover:bg-[#e8841a] transition-colors"
