@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 const PROBLEM_CARDS = [
   '"$1.3 trillion in Bitcoin is sitting completely idle right now."',
   '"73% of Bitcoin holders want yield. 77% have never tried."',
@@ -26,12 +28,20 @@ export default function Home() {
         <span className="font-bold text-xl tracking-tight select-none">
           Bit<span className="text-[#F7931A]">Yield</span>
         </span>
-        <a
-          href="#waitlist"
-          className="bg-[#F7931A] text-black font-semibold px-5 py-2 rounded-lg text-sm hover:bg-[#e8841a] transition-colors"
-        >
-          Join the Waitlist
-        </a>
+        <div className="flex items-center gap-4">
+          <Link
+            href="/deposit"
+            className="text-sm text-zinc-400 hover:text-white transition-colors"
+          >
+            Try the Demo
+          </Link>
+          <a
+            href="#waitlist"
+            className="bg-[#F7931A] text-black font-semibold px-5 py-2 rounded-lg text-sm hover:bg-[#e8841a] transition-colors"
+          >
+            Join the Waitlist
+          </a>
+        </div>
       </nav>
 
       {/* ── Hero ── */}
