@@ -1,0 +1,15 @@
+{
+  "name": "bityield-contracts",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "@stacks/clarinet-sdk": "^3.20.0",
+    "@stacks/transactions": "^7.4.0",
+    "vitest": "^3",
+    "vitest-environment-clarinet": "^3.0.2"
+  }
+}

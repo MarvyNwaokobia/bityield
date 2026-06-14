@@ -1,0 +1,22 @@
+[network]
+name = "devnet"
+
+[accounts.deployer]
+mnemonic = "nurse dentist flame front shine cycle frost twist rent cat age remain"
+balance = 100_000_000_000_000
+
+[accounts.wallet_1]
+mnemonic = "confirm wood industry spray engage acquire spike deal rate frequent taste more"
+balance = 100_000_000_000_000
+
+[accounts.wallet_2]
+mnemonic = "educate just quality toe top floor drop leisure toy drive jealous giraffe"
+balance = 100_000_000_000_000
+
+[accounts.wallet_3]
+mnemonic = "dog run hover repeat cousin ozone thumb either clock mammal recycle clean"
+balance = 100_000_000_000_000
+
+[accounts.wallet_4]
+mnemonic = "speak forum lucky episode twist bracket spatial divert zoo question next armed"
+balance = 100_000_000_000_000
