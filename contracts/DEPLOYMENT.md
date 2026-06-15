@@ -1,5 +1,21 @@
 # Deployment guide
 
+## Current testnet deployment
+
+`yield-router`, `mock-sbtc-token`, and `sip-010-trait` are deployed at
+`ST2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219R8QTX0F` (see
+`deployments/default.testnet-plan.yaml`). `app/.env.local` /
+Vercel production env vars point at this deployment, with
+`NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS` set to Hiro's testnet sBTC contract
+(`ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token`). The full
+deposit → position → withdraw flow, including fee sponsorship, has been
+verified end-to-end against this deployment.
+
+The steps below are for redeploying (e.g. after a contract change or testnet
+reset) — they don't need to be repeated to use the current deployment.
+
+---
+
 This project's contract tests (`npm test`) run entirely against an in-memory
 WASM "simnet" via `@stacks/clarinet-sdk` - no installs or funded accounts are
 needed for that. Everything below is only required to get `yield-router` onto
