@@ -77,6 +77,9 @@ async function submitSponsoredContractCall(
       functionArgs,
       network: NETWORK_NAME,
       sponsored: true,
+      // deposit/withdraw move sBTC via ft-transfer? without declaring matching
+      // post-conditions, so Deny mode (the default) would abort the tx.
+      postConditionMode: 'allow',
     });
   } catch (err) {
     const code = (err as { code?: number }).code;
