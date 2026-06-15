@@ -11,6 +11,25 @@
 
 ---
 
+## Status
+
+**v0.1 is live on Stacks testnet.** Connect a Leather wallet, deposit sBTC,
+and watch it accrue yield — withdraw anytime, with every transaction's STX
+fee sponsored so users never need to hold STX.
+
+- `YieldRouter` contract:
+  [`ST2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219R8QTX0F.yield-router`](https://explorer.hiro.so/txid/ST2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219R8QTX0F.yield-router?chain=testnet)
+- Deposit → position → withdraw verified end-to-end on testnet, including the
+  fee-sponsorship pipeline.
+- The yield strategy is currently **self-contained**: deposited sBTC is held
+  by the contract and accrues a fixed, admin-set APY (5% by default) rather
+  than being routed to Zest, Hermetica, or Dual Stacking yet — see
+  [Roadmap](#roadmap).
+
+See `contracts/DEPLOYMENT.md` for how this was deployed and how to redeploy.
+
+---
+
 ## The problem
 
 $1.3 trillion in Bitcoin is earning 0%.
@@ -109,31 +128,36 @@ High-level flow:
                 |-- BTC-denominated portfolio view
                 |-- One-tap withdrawal
 
-The YieldRouter contract is a routing and accounting layer only. BitYield
-never holds user funds. Positions are held by the underlying protocols.
+The target design: YieldRouter is a routing and accounting layer only,
+BitYield never holds user funds, and positions are held by the underlying
+protocols. **v0.1 implements the accounting layer and a self-contained
+"mock-yield" strategy** — deposited sBTC is held by YieldRouter itself and
+accrues a fixed, admin-settable APY (5% by default), computed linearly from
+elapsed block height. The `strategy` field on each position is already
+recorded so real protocol routing (Zest, Hermetica, Dual Stacking) can be
+added as additional strategies without migrating existing positions.
 
-Core Clarity interface:
+Core Clarity interface (as deployed):
 
-  (define-public (deposit (amount uint) (strategy (string-ascii 20)))
-    ;; Accept sBTC from caller
-    ;; Route to selected protocol
-    ;; Record position with entry price and timestamp
-    ;; Return position receipt
+  (define-public (deposit (amount uint) (strategy (string-ascii 20)) (token <sip-010-trait>))
+    ;; Transfer sBTC from caller to the contract
+    ;; Record position with entry block height and current APY
+    ;; Return position-id
   )
 
-  (define-public (withdraw (position-id uint))
-    ;; Verify caller owns position
-    ;; Withdraw from underlying protocol
-    ;; Return sBTC plus accrued yield to caller
+  (define-public (withdraw (position-id uint) (token <sip-010-trait>))
+    ;; Verify caller owns the open position
+    ;; Transfer principal + accrued yield back to caller
+    ;; Mark position closed
   )
 
-  (define-read-only (get-position (user principal))
-    ;; Return: amount, strategy, current-yield, entry-time, btc-value
+  (define-read-only (get-position (owner principal) (position-id uint))
+    ;; Return: amount, strategy, entry-block, apy-bps, closed
   )
 
   (define-read-only (get-best-rate)
-    ;; Compare live rates across all integrated protocols
-    ;; Return: strategy-name, current-apy, tvl
+    ;; Return: strategy-name, current apy-bps, tvl
+    ;; (v0.1: always the mock-yield strategy)
   )
 
 Frontend pages:
@@ -201,24 +225,26 @@ See docs/validation-plan.md for the full research protocol.
 Validation stage: May to June 2026
 - [ ] User discovery interviews with 20 to 30 non-technical BTC holders
 - [ ] Problem framing and message testing
-- [ ] Prototype deposit flow on Stacks testnet
+- [x] Prototype deposit + withdraw flow on Stacks testnet
 - [ ] Validate or invalidate core assumption
 
-v0.1: July 2026 if validation confirms
-- [ ] YieldRouter Clarity contract on testnet
-- [ ] Next.js frontend with deposit flow only
-- [ ] Leather Wallet integration
-- [ ] Zest Protocol as primary yield option
+v0.1: shipped ahead of schedule (June 2026)
+- [x] YieldRouter Clarity contract deployed on testnet
+- [x] Next.js frontend with deposit, withdraw, and dashboard
+- [x] Leather Wallet integration
+- [x] Fee abstraction via sponsored transactions (no STX required from users)
+- [ ] Zest Protocol as primary yield option (still the self-contained
+      mock-yield strategy — see [Status](#status))
 
 v0.2: August 2026
 - [ ] Hermetica integration
 - [ ] Dual Stacking integration
-- [ ] Portfolio dashboard
-- [ ] Withdrawal flow
+- [x] Portfolio dashboard
+- [x] Withdrawal flow
 
 v1.0: Q4 2026
 - [ ] Mainnet deployment
-- [ ] Fee abstraction using sBTC for gas
+- [x] Fee abstraction using sBTC for gas (testnet — sponsored transactions)
 - [ ] Mobile-optimized UX
 - [ ] USDCx stablecoin yield path
 
