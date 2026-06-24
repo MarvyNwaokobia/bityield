@@ -1,16 +1,10 @@
 ;; yield-router.clar
 ;;
 ;; Non-custodial routing + accounting layer for BitYield deposits.
-;;
-;; v0.1 uses a single self-contained "mock-yield" strategy: deposited sBTC is
-;; held by this contract and accrues yield at an admin-settable APY, computed
-;; linearly from elapsed block height since the position was opened. Real
-;; protocol routing (Zest, Hermetica, Dual Stacking) is a future strategy that
-;; can be added without migrating existing positions - the `strategy` field on
-;; each position is already recorded for that purpose, it just isn't validated
-;; against a strategy registry yet.
+;; Delegates actual deposit custody and yield generation to registered strategy contracts.
 
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
+(use-trait yield-strategy-trait .yield-strategy-trait.yield-strategy-trait)
 
 (define-constant CONTRACT-OWNER tx-sender)
 (define-constant BLOCKS-PER-YEAR u52560) ;; ~10 minute block time
@@ -21,11 +15,19 @@
 (define-constant ERR-NOT-FOUND (err u102))
 (define-constant ERR-ALREADY-CLOSED (err u103))
 (define-constant ERR-TOO-MANY-POSITIONS (err u104))
-
-;; Current APY for new positions, in basis points (500 = 5.00%).
-(define-data-var current-apy-bps uint u500)
+(define-constant ERR-STRATEGY-NOT-REGISTERED (err u105))
+(define-constant ERR-STRATEGY-INACTIVE (err u106))
+(define-constant ERR-STRATEGY-MISMATCH (err u107))
+(define-constant ERR-INVALID-TOKEN (err u108))
 
 (define-data-var position-nonce uint u0)
+(define-data-var sbtc-token-contract principal .mock-sbtc-token)
+
+;; Registry of strategies mapping name to contract principal and active status
+(define-map strategy-contracts
+  (string-ascii 20)
+  { contract: principal, active: bool }
+)
 
 (define-map positions
   { owner: principal, position-id: uint }
@@ -40,54 +42,112 @@
 
 (define-map owner-positions principal (list 50 uint))
 
+;; Best rate cache to allow read-only lookups without trait passing
+(define-data-var best-strategy-name (string-ascii 20) "mock-yield")
+(define-data-var best-apy-bps uint u500)
+(define-data-var best-tvl uint u0)
+
 ;; --- Public functions ---
 
-(define-public (deposit (amount uint) (strategy (string-ascii 20)) (token <sip-010-trait>))
+(define-public (deposit (amount uint) (strategy-name (string-ascii 20)) (strategy <yield-strategy-trait>) (token <sip-010-trait>))
   (begin
     (asserts! (> amount u0) ERR-ZERO-AMOUNT)
-    (try! (contract-call? token transfer amount tx-sender (as-contract tx-sender) none))
+    (asserts! (is-eq (contract-of token) (var-get sbtc-token-contract)) ERR-INVALID-TOKEN)
     (let (
+        (registry (unwrap! (map-get? strategy-contracts strategy-name) ERR-STRATEGY-NOT-REGISTERED))
+        (strategy-contract (contract-of strategy))
         (position-id (var-get position-nonce))
         (existing (default-to (list) (map-get? owner-positions tx-sender)))
       )
-      (map-set positions { owner: tx-sender, position-id: position-id }
-        {
-          amount: amount,
-          strategy: strategy,
-          entry-block: block-height,
-          apy-bps: (var-get current-apy-bps),
-          closed: false
-        }
+      ;; Safety checks
+      (asserts! (get active registry) ERR-STRATEGY-INACTIVE)
+      (asserts! (is-eq strategy-contract (get contract registry)) ERR-STRATEGY-MISMATCH)
+
+      ;; Transfer sBTC directly from user to the strategy contract
+      (try! (contract-call? token transfer amount tx-sender strategy-contract none))
+
+      ;; Call deposit on the strategy
+      (try! (contract-call? strategy deposit amount))
+
+      ;; Record position with entry block height and current APY from strategy
+      (let ((apy (unwrap-panic (contract-call? strategy get-apy))))
+        (map-set positions { owner: tx-sender, position-id: position-id }
+          {
+            amount: amount,
+            strategy: strategy-name,
+            entry-block: block-height,
+            apy-bps: apy,
+            closed: false
+          }
+        )
+        (map-set owner-positions tx-sender
+          (unwrap! (as-max-len? (append existing position-id) u50) ERR-TOO-MANY-POSITIONS))
+        (var-set position-nonce (+ position-id u1))
+        (ok position-id)
       )
-      (map-set owner-positions tx-sender
-        (unwrap! (as-max-len? (append existing position-id) u50) ERR-TOO-MANY-POSITIONS))
-      (var-set position-nonce (+ position-id u1))
-      (ok position-id)
     )
   )
 )
 
-(define-public (withdraw (position-id uint) (token <sip-010-trait>))
+(define-public (withdraw (position-id uint) (strategy <yield-strategy-trait>) (token <sip-010-trait>))
   (let (
       (caller tx-sender)
       (pos (unwrap! (map-get? positions { owner: tx-sender, position-id: position-id }) ERR-NOT-FOUND))
+      (strategy-name (get strategy pos))
+      (registry (unwrap! (map-get? strategy-contracts strategy-name) ERR-STRATEGY-NOT-REGISTERED))
+      (strategy-contract (contract-of strategy))
     )
     (asserts! (not (get closed pos)) ERR-ALREADY-CLOSED)
-    (let ((payout (+ (get amount pos) (get-accrued-yield pos))))
+    (asserts! (is-eq (contract-of token) (var-get sbtc-token-contract)) ERR-INVALID-TOKEN)
+    (asserts! (is-eq strategy-contract (get contract registry)) ERR-STRATEGY-MISMATCH)
+
+    ;; Delegate withdrawal and payout calculations to the strategy contract
+    (let (
+        (payout (try! (contract-call? strategy withdraw (get amount pos) caller (get entry-block pos) (get apy-bps pos) token)))
+      )
       (map-set positions { owner: caller, position-id: position-id } (merge pos { closed: true }))
-      (try! (as-contract (contract-call? token transfer payout tx-sender caller none)))
       (ok payout)
     )
   )
 )
 
-;; Admin-only: updates the APY applied to positions opened from this point
-;; forward. Existing open positions keep the APY they were opened with.
-(define-public (set-apy (new-apy-bps uint))
+;; Admin-only: Register a new strategy contract principal
+(define-public (add-strategy (name (string-ascii 20)) (contract principal))
   (begin
     (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-OWNER)
-    (var-set current-apy-bps new-apy-bps)
-    (ok new-apy-bps)
+    (map-set strategy-contracts name { contract: contract, active: true })
+    (ok true)
+  )
+)
+
+;; Admin-only: Enable or disable a registered strategy
+(define-public (set-strategy-status (name (string-ascii 20)) (active bool))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-OWNER)
+    (let ((curr (unwrap! (map-get? strategy-contracts name) ERR-STRATEGY-NOT-REGISTERED)))
+      (map-set strategy-contracts name (merge curr { active: active }))
+      (ok true)
+    )
+  )
+)
+
+;; Admin-only: Update the official sBTC token contract principal
+(define-public (set-sbtc-token (new-token principal))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-OWNER)
+    (var-set sbtc-token-contract new-token)
+    (ok new-token)
+  )
+)
+
+;; Admin-only: Update the best rate cache variables
+(define-public (set-best-rate (name (string-ascii 20)) (apy-bps uint) (tvl uint))
+  (begin
+    (asserts! (is-eq tx-sender CONTRACT-OWNER) ERR-NOT-OWNER)
+    (var-set best-strategy-name name)
+    (var-set best-apy-bps apy-bps)
+    (var-set best-tvl tvl)
+    (ok true)
   )
 )
 
@@ -103,8 +163,6 @@
   (map-get? positions { owner: owner, position-id: position-id })
 )
 
-;; Convenience read for the frontend: current principal + accrued yield for a
-;; position, without the caller having to re-implement the accrual formula.
 (define-read-only (get-position-value (owner principal) (position-id uint))
   (match (map-get? positions { owner: owner, position-id: position-id })
     pos (some {
@@ -121,5 +179,17 @@
 )
 
 (define-read-only (get-best-rate)
-  { strategy: "mock-yield", apy-bps: (var-get current-apy-bps), tvl: u0 }
+  {
+    strategy: (var-get best-strategy-name),
+    apy-bps: (var-get best-apy-bps),
+    tvl: (var-get best-tvl)
+  }
+)
+
+(define-read-only (get-strategy (name (string-ascii 20)))
+  (map-get? strategy-contracts name)
+)
+
+(define-read-only (get-sbtc-token)
+  (var-get sbtc-token-contract)
 )

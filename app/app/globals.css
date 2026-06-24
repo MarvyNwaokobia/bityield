@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@theme {
+  --color-bitcoin: #f7931a;
+  --color-bitcoin-dark: #e8841a;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-space-grotesk), var(--font-inter), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -7,4 +15,39 @@ html {
 body {
   background: #0a0a0a;
   color: #ededed;
+}
+
+/* Subtle hover glow for cards — orange border + soft outer glow. */
+.glow-card {
+  transition:
+    border-color 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+
+.glow-card:hover {
+  border-color: rgba(247, 147, 26, 0.35);
+  box-shadow:
+    0 0 0 1px rgba(247, 147, 26, 0.08),
+    0 12px 40px -16px rgba(247, 147, 26, 0.35);
+}
+
+/* Slow drifting blob used behind the landing hero. Transform-only. */
+@keyframes float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(30px, -40px) scale(1.08);
+  }
+}
+
+.animate-float {
+  animation: float 12s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float {
+    animation: none;
+  }
 }
