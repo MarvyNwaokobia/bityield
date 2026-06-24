@@ -1,6 +1,6 @@
 import { JsonRpcErrorCode, request } from '@stacks/connect';
 import { Cl, type ClarityValue } from '@stacks/transactions';
-import { HIRO_API_URL, NETWORK_NAME, SBTC_TOKEN, YIELD_ROUTER, toContractId } from './network';
+import { HIRO_API_URL, NETWORK_NAME, SBTC_TOKEN, YIELD_ROUTER, STRATEGIES, type StrategyName, toContractId } from './network';
 
 export type TxOutcome =
   | { status: 'success'; txid: string }
@@ -104,26 +104,51 @@ async function submitSponsoredContractCall(
   return pollTxStatus(txid, timeoutMs);
 }
 
-export async function submitDepositTx(amountSats: number, options: SubmitOptions = {}): Promise<TxOutcome> {
+export async function submitDepositTx(
+  amountSats: number,
+  strategyName: StrategyName,
+  options: SubmitOptions = {}
+): Promise<TxOutcome> {
   if (!SBTC_TOKEN) {
     throw new Error('sBTC token contract is not configured (NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS).');
+  }
+  const strategy = STRATEGIES[strategyName];
+  if (!strategy) {
+    throw new Error(`Strategy contract for ${strategyName} is not configured.`);
   }
 
   return submitSponsoredContractCall(
     'deposit',
-    [Cl.uint(amountSats), Cl.stringAscii('mock-yield'), Cl.principal(toContractId(SBTC_TOKEN))],
+    [
+      Cl.uint(amountSats),
+      Cl.stringAscii(strategyName),
+      Cl.principal(toContractId(strategy)),
+      Cl.principal(toContractId(SBTC_TOKEN)),
+    ],
     options
   );
 }
 
-export async function submitWithdrawTx(positionId: number, options: SubmitOptions = {}): Promise<TxOutcome> {
+export async function submitWithdrawTx(
+  positionId: number,
+  strategyName: StrategyName,
+  options: SubmitOptions = {}
+): Promise<TxOutcome> {
   if (!SBTC_TOKEN) {
     throw new Error('sBTC token contract is not configured (NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS).');
+  }
+  const strategy = STRATEGIES[strategyName];
+  if (!strategy) {
+    throw new Error(`Strategy contract for ${strategyName} is not configured.`);
   }
 
   return submitSponsoredContractCall(
     'withdraw',
-    [Cl.uint(positionId), Cl.principal(toContractId(SBTC_TOKEN))],
+    [
+      Cl.uint(positionId),
+      Cl.principal(toContractId(strategy)),
+      Cl.principal(toContractId(SBTC_TOKEN)),
+    ],
     options
   );
 }
