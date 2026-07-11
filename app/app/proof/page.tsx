@@ -26,11 +26,18 @@ function shortId(id: string) {
   return `${id.slice(0, 10)}…${id.slice(-6)}`;
 }
 
+// Bitcoin amount without noisy trailing zeros: 30000 sats -> "0.0003".
+function btcCompact(sats: number): string {
+  return Number(satsToBtc(BigInt(sats)).toFixed(8)).toString();
+}
+
 function StatTile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
-    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5">
-      <p className="text-zinc-500 text-xs uppercase tracking-widest">{label}</p>
-      <p className="font-display text-3xl font-bold mt-2">{value}</p>
+    <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 min-w-0">
+      <p className="text-zinc-500 text-xs uppercase tracking-widest truncate">{label}</p>
+      <p className="font-display text-2xl md:text-3xl font-bold mt-2 tabular-nums leading-tight">
+        {value}
+      </p>
       {sub && <p className="text-zinc-500 text-xs mt-1">{sub}</p>}
     </div>
   );
@@ -103,11 +110,7 @@ export default function ProofPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
               <StatTile label="Deposits" value={String(stats.totalDeposits)} />
               <StatTile label="Withdrawals" value={String(stats.totalWithdrawals)} />
-              <StatTile
-                label="Deposit volume"
-                value={`${satsToBtc(BigInt(stats.depositVolumeSats)).toFixed(8)}`}
-                sub="BTC"
-              />
+              <StatTile label="Deposit volume" value={btcCompact(stats.depositVolumeSats)} sub="BTC" />
               <StatTile label="Unique wallets" value={String(stats.uniqueUsers)} />
             </div>
 
@@ -145,7 +148,7 @@ export default function ProofPage() {
             </div>
 
             <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-x-auto">
-              <table className="w-full text-sm min-w-[640px]">
+              <table className="w-full text-sm min-w-160">
                 <thead>
                   <tr className="text-zinc-500 text-xs uppercase tracking-wider border-b border-zinc-800">
                     <th className="text-left font-medium px-4 py-3">Action</th>

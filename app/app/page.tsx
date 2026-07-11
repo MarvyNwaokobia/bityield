@@ -76,7 +76,7 @@ function LiveProof() {
     fetchRouterStats(50).then(setStats).catch(() => {});
   }, []);
 
-  const volume = stats ? satsToBtc(BigInt(stats.depositVolumeSats)).toFixed(6) : '—';
+  const volume = stats ? Number(satsToBtc(BigInt(stats.depositVolumeSats)).toFixed(8)).toString() : '—';
   const sponsoredPct =
     stats && stats.txs.length > 0 ? Math.round((stats.sponsoredCount / stats.txs.length) * 100) : 100;
 
