@@ -2,14 +2,38 @@
 
 ## Current testnet deployment
 
-`yield-router`, `mock-sbtc-token`, and `sip-010-trait` are deployed at
-`ST2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219R8QTX0F` (see
-`deployments/default.testnet-plan.yaml`). `app/.env.local` /
-Vercel production env vars point at this deployment, with
-`NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS` set to Hiro's testnet sBTC contract
-(`ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token`). The full
-deposit → position → withdraw flow, including fee sponsorship, has been
-verified end-to-end against this deployment.
+The full multi-strategy contract set is deployed at
+**`ST2THJ89ZREME71RPE31ATPVDBSR4MFTBRSDXV7NM`** (see
+`deployments/default.testnet-plan.yaml`), in dependency order:
+
+| Contract                 | Role                                          |
+|--------------------------|-----------------------------------------------|
+| `sip-010-trait`          | SIP-010 fungible-token trait                  |
+| `yield-strategy-trait`   | Trait every yield strategy implements         |
+| `mock-sbtc-token`        | Mintable sBTC stand-in (tests / local only)   |
+| `mock-yield-strategy`    | Self-contained 5.00% strategy                 |
+| `zest-strategy`          | Zest lending, 4.50% APY                        |
+| `hermetica-strategy`     | Hermetica structured, 6.20% APY               |
+| `dual-stacking-strategy` | Dual Stacking PoX, 8.50% APY                   |
+| `yield-router`           | Non-custodial routing + accounting layer      |
+
+After deploy, the router was wired up with `scripts/register-strategies.mjs`:
+`set-sbtc-token` points it at Hiro's testnet sBTC contract
+(`ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token`), and all four
+strategies are registered and active. `app/.env.local` / Vercel production env
+vars point `NEXT_PUBLIC_YIELD_ROUTER_ADDRESS` at this deployer; the strategy
+addresses are derived from it automatically (see `app/lib/stacks/network.ts`).
+
+> **Note (prior deployment):** an earlier, single-strategy `yield-router` lived
+> at `ST2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219R8QTX0F`. Its `deposit` ABI predates the
+> strategy-routing refactor and no longer matches the frontend — it is
+> abandoned. Use the `ST2THJ89…` deployment above.
+
+> **Real sBTC yield float:** each strategy pays out `principal + yield` on
+> `withdraw` but only receives `principal` on `deposit`. With the real sBTC
+> token, transfer each strategy a small sBTC buffer so withdrawals can cover
+> accrued yield. Deposits do not need this. (With `mock-sbtc-token` you just
+> `mint` the buffer — see the test suite.)
 
 The steps below are for redeploying (e.g. after a contract change or testnet
 reset) — they don't need to be repeated to use the current deployment.
@@ -53,13 +77,33 @@ clarinet deployments generate --testnet --medium-cost
 clarinet deployments apply --testnet
 ```
 
-This deploys, in order, `sip-010-trait`, `mock-sbtc-token`, and `yield-router`
-to your deployer's address.
+This deploys all eight contracts (traits, token, four strategies, router) to
+your deployer's address, in dependency order.
 
-> `mock-sbtc-token` is only needed for end-to-end testing before the real sBTC
-> contract (step 5) is wired up. Once `NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS` points
-> at the real sBTC token, `mock-sbtc-token` can stay deployed-but-unused, or be
-> removed from the deployment plan before applying.
+> `mock-sbtc-token` is only needed for local/simnet testing before the real
+> sBTC contract (step 5) is wired up. Once the router points at the real sBTC
+> token, `mock-sbtc-token` can stay deployed-but-unused.
+
+Because Clarity contracts are immutable, you cannot republish a contract name
+that already exists at your deployer address. To redeploy changed contracts,
+deploy from a **fresh** deployer address (all `.contract` references resolve to
+the new deployer automatically — no code changes needed).
+
+## 3b. Register strategies + set the sBTC token
+
+The deployment plan only publishes contracts; two admin-only calls wire the
+router up afterward (`add-strategy` ×4 and `set-sbtc-token`). Run them with:
+
+```
+DEPLOYER_KEY=<hex private key of the deployer> \
+NETWORK=testnet \
+ROUTER=<deployer-address>.yield-router \
+SBTC=ST1F7QA2MDF17S807EPA36TSS8AMEFY4KA9TVGWXT.sbtc-token \
+node scripts/register-strategies.mjs
+```
+
+Omit `SBTC` to keep the router's default `.mock-sbtc-token`. Verify afterward
+with the router's `get-strategy` / `get-sbtc-token` read-only functions.
 
 ## 4. Point the frontend at the deployed YieldRouter
 

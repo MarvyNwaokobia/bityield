@@ -6,6 +6,11 @@
 # These contain real account mnemonics/private keys - never commit them.
 /settings/Testnet.toml
 /settings/Mainnet.toml
+/settings/*.bak
+
+# Scratch files holding generated keys/mnemonics - never commit them.
+._deployer.json
+._*.mjs
 
 # coverage/cost reports
 /coverage
