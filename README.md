@@ -212,9 +212,20 @@ through deposit confirmation. Mapping to the acceptance criteria:
 
 **Demo video:** _(link coming — records the full mainnet deposit flow)_
 
+**Live on-chain proof:** the app's [`/proof`](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet)
+page reads the router's real transaction history straight from the Stacks chain
+(deposits, withdrawals, volume, wallets) with per-transaction explorer links and
+a CSV export. A first end-to-end mainnet deposit + withdrawal, both gas-sponsored
+(user paid 0 STX), is already recorded:
+
+| Action | Transaction |
+|--------|-------------|
+| Deposit 0.0003 sBTC → Zest | [`0xca34c125…`](https://explorer.hiro.so/txid/0xca34c125fb54dfc24c1ed15efea6b93dfdb148116a6760cd5a9b91710f8da8df?chain=mainnet) |
+| Withdrawal (principal returned) | [`0x3f58aa77…`](https://explorer.hiro.so/txid/0x3f58aa77f7d08afe5190fc6610f45eac5a6c56aaffba136719278ae3306e4ba4?chain=mainnet) |
+
 To test it yourself: connect a Stacks wallet holding a small amount of sBTC,
 open `/deposit`, pick a strategy, and confirm. You pay **no STX** — the fee is
-sponsored. The resulting position is visible on `/dashboard` and on the
+sponsored. The resulting position is visible on `/dashboard`, `/proof`, and the
 [explorer](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet).
 
 ---
@@ -231,10 +242,14 @@ sponsored. The resulting position is visible on `/dashboard` and on the
 | `mock-yield-strategy` | Self-contained 5% strategy |
 | `yield-strategy-trait` / `sip-010-trait` | Shared traits |
 
+Every contract id is `SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.<contract-name>`
+— e.g. the router is `SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router` and
+the Zest strategy is `SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.zest-strategy`.
+
 The router is pointed at the canonical mainnet sBTC token
 `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`, and all four strategies
 are registered and active — verify with the router's `get-strategy` /
-`get-sbtc-token` read-only functions on the explorer.
+`get-sbtc-token` read-only functions on the explorer, or on the app's `/proof` page.
 
 Full deploy + registration steps (testnet and mainnet), and how to redeploy,
 are in [`contracts/DEPLOYMENT.md`](contracts/DEPLOYMENT.md).
