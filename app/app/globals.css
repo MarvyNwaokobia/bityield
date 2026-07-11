@@ -51,3 +51,60 @@ body {
     animation: none;
   }
 }
+
+/* Layered gradient-mesh backdrop for hero / feature sections (premium depth). */
+.mesh-bg {
+  background:
+    radial-gradient(55% 45% at 78% 18%, rgba(247, 147, 26, 0.16), transparent 68%),
+    radial-gradient(45% 45% at 12% 28%, rgba(247, 147, 26, 0.08), transparent 70%),
+    radial-gradient(48% 42% at 55% 92%, rgba(16, 185, 129, 0.05), transparent 72%);
+}
+
+/* Faint grid lines, masked to fade toward the edges. */
+.grid-lines {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(70% 55% at 50% 35%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(70% 55% at 50% 35%, #000 40%, transparent 100%);
+}
+
+/* Glassy surface for the hero product mockup and premium cards. */
+.glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.015));
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+/* Subtle top hairline highlight for cards. */
+.card-sheen {
+  position: relative;
+}
+.card-sheen::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+}
+
+/* Soft, slow drift for the hero mockup. */
+@keyframes floaty {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+.animate-floaty {
+  animation: floaty 7s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-floaty {
+    animation: none;
+  }
+}
