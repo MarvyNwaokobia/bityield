@@ -10,56 +10,56 @@ plan:
     - transaction-type: contract-publish
       contract-name: sip-010-trait
       expected-sender: SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN
-      cost: 3345665
+      cost: 1112602
       path: contracts/sip-010-trait.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: yield-strategy-trait
       expected-sender: SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN
-      cost: 3345528
+      cost: 1112556
       path: contracts/yield-strategy-trait.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: dual-stacking-strategy
       expected-sender: SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN
-      cost: 3346349
+      cost: 1112829
       path: contracts/dual-stacking-strategy.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: hermetica-strategy
       expected-sender: SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN
-      cost: 3346349
+      cost: 1112829
       path: contracts/hermetica-strategy.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: mock-sbtc-token
       expected-sender: SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN
-      cost: 3345939
+      cost: 1112693
       path: contracts/mock-sbtc-token.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: mock-yield-strategy
       expected-sender: SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN
-      cost: 3346623
+      cost: 1112920
       path: contracts/mock-yield-strategy.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: yield-router
       expected-sender: SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN
-      cost: 3349496
+      cost: 1113876
       path: contracts/yield-router.clar
       anchor-block-only: true
       clarity-version: 2
     - transaction-type: contract-publish
       contract-name: zest-strategy
       expected-sender: SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN
-      cost: 3346349
+      cost: 1112829
       path: contracts/zest-strategy.clar
       anchor-block-only: true
       clarity-version: 2
