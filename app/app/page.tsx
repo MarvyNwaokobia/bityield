@@ -1,97 +1,125 @@
 'use client';
 
-import { useRef } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { motion, useInView } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ConnectWalletButton } from './components/ConnectWalletButton';
 import { Logo } from './components/Logo';
-import { AnimatedNumber } from './components/AnimatedNumber';
 import { RevealOnScroll, RevealItem } from './components/RevealOnScroll';
 import { PrimaryLinkButton } from './components/Button';
 import { fadeSlideUp, staggerContainer } from '@/lib/motion';
+import { fetchRouterStats, type RouterStats } from '@/lib/stacks/analytics';
+import { satsToBtc } from '@/lib/stacks/format';
 
-// ─── Data ────────────────────────────────────────────────────────────────────
-
-const OPPORTUNITY_STATS: { value: number; format: (n: number) => string; label: string }[] = [
-  { value: 1.3, format: (n) => `$${n.toFixed(1)}T`, label: 'in Bitcoin sitting completely idle right now' },
-  { value: 73, format: (n) => `${Math.round(n)}%`, label: 'of Bitcoin holders want yield on their BTC' },
-  { value: 77, format: (n) => `${Math.round(n)}%`, label: 'have never tried — the tools felt built for traders' },
-];
+// ─── Content ─────────────────────────────────────────────────────────────────
 
 const HOW_STEPS = [
-  { n: '01', title: 'Connect your Bitcoin wallet', desc: 'Link your Stacks wallet in seconds — no new accounts.' },
-  { n: '02', title: 'See your balance and yield rate', desc: 'Live APY, transparent rates, always paid in Bitcoin.' },
-  { n: '03', title: 'One button. Your Bitcoin goes to work.', desc: 'Non-custodial. Withdraw anytime, no lock-up periods.' },
+  { n: '01', title: 'Connect your wallet', desc: 'Link a Stacks wallet in seconds. No new accounts, no seed phrases to create.' },
+  { n: '02', title: 'Choose your yield', desc: 'Pick a strategy and see the rate up front — always denominated in Bitcoin.' },
+  { n: '03', title: 'Earn, withdraw anytime', desc: 'Non-custodial and open-ended. Your BTC works for you; pull it out whenever.' },
 ];
 
-const PROOF_STATS: { value: number; format: (n: number) => string; label: string }[] = [
-  { value: 545, format: (n) => `$${Math.round(n)}M`, label: 'Bitcoin already deployed on Stacks' },
-  { value: 100, format: (n) => `$${Math.round(n)}M+`, label: 'Capital earning yield through Dual Stacking' },
-  { value: 70, format: (n) => `$${Math.round(n)}M+`, label: 'Deposits on Zest Protocol' },
-  { value: 5, format: (n) => `${Math.round(n)}% APY`, label: 'Paid in Bitcoin, not tokens' },
+const INFRA = [
+  { name: 'sBTC', role: '1:1 Bitcoin-backed asset', live: true },
+  { name: 'Leather', role: 'Wallet & connection', live: true },
+  { name: 'Hiro', role: 'Stacks API & tooling', live: true },
+  { name: 'Zest Protocol', role: 'BTC lending yield', live: false },
+  { name: 'Hermetica', role: 'Structured BTC yield', live: false },
+  { name: 'Dual Stacking', role: 'PoX yield', live: false },
 ];
 
-const TRUST_POINTS = [
+const FAQ = [
   {
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-      </svg>
-    ),
-    title: 'Your keys, your Bitcoin',
-    desc: 'Non-custodial. Your BTC stays on-chain under your control at all times — we never hold it.',
+    q: 'Does my Bitcoin leave the Bitcoin network?',
+    a: 'No. sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1 consensus. You hold it under your own keys — there is no third-party custodian and no wrapped-token bridge risk.',
   },
   {
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z" />
-      </svg>
-    ),
-    title: 'No bridges or wrapping',
-    desc: 'Your Bitcoin stays on Bitcoin L1. No synthetic assets, no bridge risk, no wrapped tokens.',
+    q: 'Why don’t I pay gas in STX?',
+    a: 'BitYield sponsors every transaction. When you sign a deposit or withdrawal, our sponsor account pays the STX network fee for you — so you never need to hold or spend STX.',
   },
   {
-    icon: (
-      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941" />
-      </svg>
-    ),
-    title: 'Yield paid in Bitcoin',
-    desc: 'Every bit of yield you earn is denominated and paid in BTC — not points, tokens, or derivatives.',
+    q: 'How are the yield rates generated today?',
+    a: 'Each strategy is currently a BitYield smart contract paying a fixed, transparent APY, labelled “Preview” in the app and fully verifiable on-chain. Live routing into the underlying protocols (Zest first) is our next milestone.',
+  },
+  {
+    q: 'Can I withdraw at any time?',
+    a: 'Yes. Positions are non-custodial and open-ended — trigger a withdrawal from your dashboard and your principal plus any accrued yield returns to your wallet.',
   },
 ];
 
-// ─── Shared StatCard ──────────────────────────────────────────────────────────
+// ─── Small pieces ────────────────────────────────────────────────────────────
 
-function StatCard({ value, format, label }: { value: number; format: (n: number) => string; label: string }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.5 });
-
+function LivePill() {
   return (
-    <motion.div
-      ref={ref}
-      variants={fadeSlideUp}
-      className="glow-card bg-zinc-900/70 border border-zinc-800 rounded-2xl p-6 text-center"
-    >
-      <p className="font-display text-3xl md:text-4xl font-bold text-bitcoin leading-tight">
-        <AnimatedNumber value={inView ? value : 0} formatter={format} />
-      </p>
-      <p className="text-zinc-500 text-sm mt-3 leading-snug">{label}</p>
-    </motion.div>
+    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/25 bg-emerald-500/10 px-3.5 py-1.5 text-xs font-medium text-emerald-400">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 motion-safe:animate-ping" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+      </span>
+      Live on Bitcoin mainnet
+    </span>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+function ProofMetric({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="text-center sm:text-left">
+      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight tabular-nums">{value}</p>
+      <p className="text-zinc-500 text-sm mt-1">{label}</p>
+    </div>
+  );
+}
+
+function LiveProof() {
+  const [stats, setStats] = useState<RouterStats | null>(null);
+  useEffect(() => {
+    fetchRouterStats(50).then(setStats).catch(() => {});
+  }, []);
+
+  const volume = stats ? satsToBtc(BigInt(stats.depositVolumeSats)).toFixed(6) : '—';
+  const sponsoredPct =
+    stats && stats.txs.length > 0 ? Math.round((stats.sponsoredCount / stats.txs.length) * 100) : 100;
+
+  return (
+    <RevealOnScroll className="rounded-3xl border border-zinc-800 bg-zinc-900/40 p-8 md:p-10">
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
+        <div>
+          <p className="text-bitcoin font-mono text-xs uppercase tracking-widest mb-2">Live on-chain</p>
+          <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight max-w-md leading-snug">
+            Every deposit is a real, public Bitcoin transaction.
+          </h2>
+        </div>
+        <Link
+          href="/proof"
+          className="text-sm font-semibold text-bitcoin hover:underline whitespace-nowrap self-start md:self-auto"
+        >
+          Open the proof page →
+        </Link>
+      </div>
+
+      <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-zinc-800 pt-8">
+        <ProofMetric value={stats ? String(stats.totalDeposits) : '—'} label="Deposits" />
+        <ProofMetric value={stats ? String(stats.totalWithdrawals) : '—'} label="Withdrawals" />
+        <ProofMetric value={volume === '—' ? '—' : `${volume}`} label="BTC deposited" />
+        <ProofMetric value={`${sponsoredPct}%`} label="Gas sponsored" />
+      </div>
+    </RevealOnScroll>
+  );
+}
+
+// ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   return (
     <div className="bg-[#0a0a0a] text-white min-h-screen">
-
-      {/* ── Nav ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex items-center justify-between border-b border-zinc-800/50 bg-[#0a0a0a]/90 backdrop-blur-sm">
+      {/* Nav */}
+      <nav className="fixed top-0 inset-x-0 z-50 px-6 py-4 flex items-center justify-between border-b border-zinc-800/50 bg-[#0a0a0a]/80 backdrop-blur-md">
         <Logo />
-        <div className="flex items-center gap-5">
-          <Link href="/dashboard" className="text-sm text-zinc-400 hover:text-white transition-colors">
+        <div className="flex items-center gap-6">
+          <Link href="/proof" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">
+            Proof
+          </Link>
+          <Link href="/dashboard" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">
             Dashboard
           </Link>
           <ConnectWalletButton />
@@ -101,181 +129,167 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* ── Hero ── */}
-      <section className="relative pt-36 pb-24 px-6 text-center max-w-4xl mx-auto overflow-hidden">
+      {/* Hero */}
+      <section className="relative px-6 pt-44 pb-28 md:pt-52 md:pb-36 text-center overflow-hidden">
         <div
           aria-hidden
-          className="absolute top-10 left-1/2 -translate-x-1/2 w-xl h-144 rounded-full bg-bitcoin/20 blur-3xl animate-float pointer-events-none"
+          className="absolute -top-20 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] max-w-full rounded-full bg-bitcoin/15 blur-3xl motion-safe:animate-float pointer-events-none"
         />
-        <motion.div
-          initial="initial"
-          animate="animate"
-          variants={staggerContainer}
-          className="relative"
-        >
+        <motion.div initial="initial" animate="animate" variants={staggerContainer} className="relative max-w-4xl mx-auto">
+          <motion.div variants={fadeSlideUp} className="mb-8">
+            <LivePill />
+          </motion.div>
           <motion.h1
             variants={fadeSlideUp}
-            className="font-display text-5xl md:text-7xl font-bold tracking-tight leading-[1.08] mb-6"
+            className="font-display text-6xl md:text-8xl font-bold tracking-[-0.03em] leading-[0.95] mb-8"
           >
-            Hold Bitcoin.{' '}
+            Hold Bitcoin.
+            <br />
             <span className="text-bitcoin">Earn Bitcoin.</span>
           </motion.h1>
           <motion.p
             variants={fadeSlideUp}
-            className="text-xl md:text-2xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
+            className="text-lg md:text-xl text-zinc-400 max-w-xl mx-auto mb-10 leading-relaxed"
           >
-            Your idle Bitcoin earns up to 8.5% APY — paid directly in BTC.
-            No bridges, no tokens, no complexity.
+            Deposit sBTC and earn yield paid in Bitcoin — non-custodial, no bridges
+            to manage, and zero gas fees to pay.
           </motion.p>
-          <motion.div variants={fadeSlideUp}>
-            <PrimaryLinkButton href="/deposit" className="px-10 py-5 text-lg mb-5">
+          <motion.div variants={fadeSlideUp} className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <PrimaryLinkButton href="/deposit" className="px-9 py-4 text-base w-full sm:w-auto">
               Launch App
             </PrimaryLinkButton>
+            <Link
+              href="/proof"
+              className="text-base font-semibold text-zinc-300 hover:text-white transition-colors px-4 py-4"
+            >
+              See the on-chain proof →
+            </Link>
           </motion.div>
-          <motion.p variants={fadeSlideUp} className="text-sm text-zinc-500">
-            Live yield infrastructure. Real Bitcoin returns. No DeFi knowledge required.
-          </motion.p>
         </motion.div>
       </section>
 
-      {/* ── Opportunity ── */}
-      <section className="py-20 px-6 max-w-5xl mx-auto">
-        <RevealOnScroll className="text-center mb-14">
-          <p className="text-bitcoin font-mono text-sm uppercase tracking-widest mb-3">The opportunity</p>
-          <p className="text-zinc-500 text-base max-w-xl mx-auto leading-relaxed">
-            Billions in idle Bitcoin. Clear demand. A front door that has never existed — until now.
-          </p>
-        </RevealOnScroll>
-        <RevealOnScroll stagger className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {OPPORTUNITY_STATS.map(({ value, format, label }) => (
-            <StatCard key={label} value={value} format={format} label={label} />
-          ))}
-        </RevealOnScroll>
-        <RevealOnScroll className="text-center mt-10">
-          <p className="text-zinc-600 text-sm max-w-xl mx-auto">
-            The infrastructure already exists. BitYield is the simple front door.
+      {/* Live proof */}
+      <section className="px-6 pb-24 md:pb-32 max-w-5xl mx-auto">
+        <LiveProof />
+      </section>
+
+      {/* Opportunity */}
+      <section className="px-6 py-24 md:py-32 border-t border-zinc-900">
+        <RevealOnScroll className="max-w-3xl mx-auto text-center">
+          <p className="text-bitcoin font-mono text-xs uppercase tracking-widest mb-5">The opportunity</p>
+          <h2 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] mb-6">
+            $1.3 trillion in Bitcoin earns 0%.
+          </h2>
+          <p className="text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto">
+            The yield infrastructure is already live and audited on Stacks. BitYield is
+            the simple front door — so your Bitcoin doesn’t have to sit idle.
           </p>
         </RevealOnScroll>
       </section>
 
-      {/* ── How It Works ── */}
-      <section className="py-20 px-6 max-w-5xl mx-auto">
-        <RevealOnScroll className="text-center mb-14">
-          <p className="text-bitcoin font-mono text-sm uppercase tracking-widest">Simple as it gets.</p>
-        </RevealOnScroll>
-        <RevealOnScroll stagger className="grid grid-cols-1 md:grid-cols-3 gap-10">
-          {HOW_STEPS.map(({ n, title, desc }) => (
-            <RevealItem key={n} className="flex flex-col gap-3">
-              <span className="font-display text-6xl font-bold text-bitcoin/30 leading-none">{n}</span>
-              <p className="font-display text-xl font-semibold leading-snug">{title}</p>
-              <p className="text-zinc-500 text-sm leading-relaxed">{desc}</p>
-            </RevealItem>
-          ))}
-        </RevealOnScroll>
-      </section>
-
-      {/* ── Proof ── */}
-      <section className="py-20 px-6 max-w-5xl mx-auto">
-        <RevealOnScroll className="text-center mb-14">
-          <p className="text-bitcoin font-mono text-sm uppercase tracking-widest">The infrastructure is real.</p>
-        </RevealOnScroll>
-        <RevealOnScroll stagger className="grid grid-cols-2 md:grid-cols-4 gap-5">
-          {PROOF_STATS.map(({ value, format, label }) => (
-            <StatCard key={label} value={value} format={format} label={label} />
-          ))}
-        </RevealOnScroll>
-        <RevealOnScroll className="text-center mt-8">
-          <p className="text-zinc-600 text-sm">
-            Yield rates are live today. BitYield is the interface that makes them accessible.
-          </p>
-        </RevealOnScroll>
-      </section>
-
-      {/* ── Trust ── */}
-      <section className="py-20 px-6 max-w-5xl mx-auto">
-        <RevealOnScroll className="text-center mb-14">
-          <p className="font-display text-3xl md:text-4xl font-bold mb-4">Built for Bitcoin holders.</p>
-          <p className="text-zinc-500 max-w-md mx-auto leading-relaxed">
-            Everything you need to earn on your Bitcoin — nothing you don&apos;t.
-          </p>
-        </RevealOnScroll>
-        <RevealOnScroll stagger className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {TRUST_POINTS.map(({ icon, title, desc }) => (
-            <RevealItem
-              key={title}
-              className="glow-card bg-zinc-900/70 border border-zinc-800 rounded-2xl p-7 flex flex-col gap-4"
-            >
-              <div className="text-bitcoin w-fit p-2 rounded-lg bg-bitcoin/10">{icon}</div>
-              <p className="font-display text-lg font-semibold">{title}</p>
-              <p className="text-zinc-500 text-sm leading-relaxed">{desc}</p>
-            </RevealItem>
-          ))}
-        </RevealOnScroll>
-      </section>
-
-      {/* ── FAQ Section ── */}
-      <section className="py-20 px-6 max-w-4xl mx-auto border-t border-zinc-900">
-        <RevealOnScroll className="text-center mb-14">
-          <p className="text-bitcoin font-mono text-sm uppercase tracking-widest mb-3">Common Questions</p>
-          <h2 className="font-display text-3xl md:text-4xl font-bold">Frequently Asked Questions</h2>
-        </RevealOnScroll>
-
-        <RevealOnScroll stagger className="space-y-6">
-          <RevealItem className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-            <h4 className="font-display font-semibold text-lg text-white mb-2">Does my Bitcoin leave the Bitcoin L1 network?</h4>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              No. Stacks sBTC uses a decentralized peg-in mechanism where your native Bitcoin remains on Bitcoin L1 under the custody of the Stacks consensus validators. You retain custody via your Stacks wallet keys, which are mapped 1:1 with your Bitcoin assets.
-            </p>
-          </RevealItem>
-
-          <RevealItem className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-            <h4 className="font-display font-semibold text-lg text-white mb-2">Why don&apos;t I need to hold or pay STX for gas?</h4>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              BitYield abstracts gas fees entirely using Stacks sponsored transactions. When you sign a deposit or withdrawal, our sponsor node pays the STX network fee on the backend, ensuring a frictionless one-tap experience.
-            </p>
-          </RevealItem>
-
-          <RevealItem className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-            <h4 className="font-display font-semibold text-lg text-white mb-2">How are the yield rates generated?</h4>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              Today each strategy is a BitYield smart contract that pays a fixed, transparent APY and is labelled &quot;Preview&quot; in the app — you can verify every contract on-chain. Live routing into the underlying protocols (starting with Zest Protocol&apos;s Bitcoin lending, then Hermetica and Dual Stacking) is our next milestone, so deposits will earn real, market-driven protocol yield.
-            </p>
-          </RevealItem>
-
-          <RevealItem className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-            <h4 className="font-display font-semibold text-lg text-white mb-2">Can I withdraw my Bitcoin at any time?</h4>
-            <p className="text-zinc-400 text-sm leading-relaxed">
-              Yes, all positions are non-custodial and open-ended. You can trigger a withdrawal from the dashboard at any time, returning your principal along with all accrued yield directly to your Stacks wallet.
-            </p>
-          </RevealItem>
-        </RevealOnScroll>
-      </section>
-
-      {/* ── Launch CTA ── */}
-      <section id="launch" className="py-24 px-6 bg-zinc-950 border-t border-zinc-900">
-        <div className="max-w-xl mx-auto text-center">
-          <h2 className="font-display text-4xl md:text-5xl font-bold mb-4">Put your Bitcoin to work.</h2>
-          <p className="text-xl text-zinc-400 mb-8 leading-relaxed">
-            BitYield is live on Bitcoin mainnet. Connect your wallet, deposit sBTC,
-            and start earning — with zero gas fees to pay.
-          </p>
-          <PrimaryLinkButton href="/deposit" className="px-10 py-5 text-lg">
-            Launch App
-          </PrimaryLinkButton>
-          <p className="text-sm text-zinc-600 mt-6">
-            Non-custodial. Withdraw anytime. No STX required.
-          </p>
+      {/* How it works */}
+      <section className="px-6 py-24 md:py-32 border-t border-zinc-900">
+        <div className="max-w-5xl mx-auto">
+          <RevealOnScroll className="mb-16 text-center">
+            <p className="text-bitcoin font-mono text-xs uppercase tracking-widest mb-3">Simple as it gets</p>
+            <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight">Three steps to yield.</h2>
+          </RevealOnScroll>
+          <RevealOnScroll stagger className="grid grid-cols-1 md:grid-cols-3 gap-10 md:gap-12">
+            {HOW_STEPS.map(({ n, title, desc }) => (
+              <RevealItem key={n} className="flex flex-col gap-3">
+                <span className="font-display text-5xl font-bold text-bitcoin/25 leading-none tabular-nums">{n}</span>
+                <p className="font-display text-xl font-semibold leading-snug mt-1">{title}</p>
+                <p className="text-zinc-500 text-sm leading-relaxed">{desc}</p>
+              </RevealItem>
+            ))}
+          </RevealOnScroll>
         </div>
       </section>
 
-      {/* ── Footer ── */}
-      <footer className="border-t border-zinc-800 py-8 px-6">
-        <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-sm">
+      {/* Infrastructure */}
+      <section className="px-6 py-24 md:py-32 border-t border-zinc-900">
+        <div className="max-w-5xl mx-auto">
+          <RevealOnScroll className="mb-16 text-center">
+            <p className="text-bitcoin font-mono text-xs uppercase tracking-widest mb-3">Built on proven infrastructure</p>
+            <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight max-w-2xl mx-auto leading-snug">
+              We don’t reinvent Bitcoin yield. We make it usable.
+            </h2>
+          </RevealOnScroll>
+          <RevealOnScroll stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {INFRA.map(({ name, role, live }) => (
+              <RevealItem
+                key={name}
+                className="glow-card bg-zinc-900/50 border border-zinc-800 rounded-2xl p-6 flex items-start justify-between gap-4"
+              >
+                <div>
+                  <p className="font-display text-lg font-semibold">{name}</p>
+                  <p className="text-zinc-500 text-sm mt-1">{role}</p>
+                </div>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider whitespace-nowrap ${
+                    live
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                  }`}
+                >
+                  {live ? 'Live' : 'Soon'}
+                </span>
+              </RevealItem>
+            ))}
+          </RevealOnScroll>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="px-6 py-24 md:py-32 border-t border-zinc-900">
+        <div className="max-w-3xl mx-auto">
+          <RevealOnScroll className="mb-14 text-center">
+            <p className="text-bitcoin font-mono text-xs uppercase tracking-widest mb-3">FAQ</p>
+            <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight">Good questions.</h2>
+          </RevealOnScroll>
+          <RevealOnScroll stagger className="space-y-4">
+            {FAQ.map(({ q, a }) => (
+              <RevealItem key={q} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
+                <h3 className="font-display font-semibold text-lg text-white mb-2">{q}</h3>
+                <p className="text-zinc-400 text-sm leading-relaxed">{a}</p>
+              </RevealItem>
+            ))}
+          </RevealOnScroll>
+        </div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="px-6 py-28 md:py-36 border-t border-zinc-900">
+        <RevealOnScroll className="max-w-2xl mx-auto text-center">
+          <h2 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] mb-6">
+            Put your Bitcoin to work.
+          </h2>
+          <p className="text-lg text-zinc-400 mb-10 leading-relaxed max-w-lg mx-auto">
+            Live on Bitcoin mainnet. Connect, deposit sBTC, and start earning — with zero gas to pay.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+            <PrimaryLinkButton href="/deposit" className="px-9 py-4 text-base w-full sm:w-auto">
+              Launch App
+            </PrimaryLinkButton>
+            <Link href="/proof" className="text-base font-semibold text-zinc-300 hover:text-white transition-colors px-4 py-4">
+              Verify on-chain →
+            </Link>
+          </div>
+          <p className="text-sm text-zinc-600 mt-8">Non-custodial · Withdraw anytime · No STX required</p>
+        </RevealOnScroll>
+      </section>
+
+      {/* Footer */}
+      <footer className="border-t border-zinc-800 py-10 px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
           <Logo />
-          <p className="text-zinc-500">Built on Stacks. Secured by Bitcoin.</p>
+          <div className="flex items-center gap-6 text-zinc-500">
+            <Link href="/deposit" className="hover:text-white transition-colors">App</Link>
+            <Link href="/proof" className="hover:text-white transition-colors">Proof</Link>
+            <span>Built on Stacks · Secured by Bitcoin</span>
+          </div>
         </div>
       </footer>
-
     </div>
   );
 }
