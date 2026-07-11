@@ -161,3 +161,75 @@ See `app/.env.example` for the template. Until `NEXT_PUBLIC_YIELD_ROUTER_ADDRESS
 and `SPONSOR_PRIVATE_KEY` are set, the app runs with read-only fallbacks (a
 default 5% APY, zero balances) and deposit/withdraw transactions will fail with
 a clear "not configured" error rather than silently doing nothing.
+
+---
+
+# Mainnet deployment (team-funded demo)
+
+> **Scope & safety.** These are unaudited contracts, and the strategies pay a
+> fixed APY that is not backed by real protocol yield yet (v0.2). So the mainnet
+> deployment is a **controlled, team-funded demo**, not a public launch: the
+> demo deposit uses the team's own sBTC only. To keep the exposure window
+> closed, register strategies right before recording and **deactivate them after**
+> (`set-strategy-status <name> false`) — that blocks new public deposits while
+> still allowing any existing position to withdraw. For a real launch: get an
+> audit, route to live protocols, and move `CONTRACT-OWNER` to a multisig cold
+> wallet.
+
+The generated mainnet accounts (secrets live in gitignored
+`contracts/settings/Mainnet.toml` and `app/.env.mainnet.local`):
+
+| Role     | Address                                     | Fund with                          |
+|----------|---------------------------------------------|------------------------------------|
+| Deployer | `SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN` | ~35 STX (deploy ≈ 26.8 STX + buffer) |
+| Sponsor  | `SP1FMF8WWHPNW2X20N0SCV6Q144K2GNQG8K6YDND3` | ~5 STX (each sponsored tx ≈ 0.003 STX) |
+
+Steps:
+
+1. **Fund the deployer + sponsor** addresses above with real STX. Fund your
+   demo wallet with a small amount of real sBTC via the bridge (https://sbtc.stacks.co).
+2. **Deploy** all eight contracts (plan already generated at
+   `deployments/default.mainnet-plan.yaml`, expected-sender = deployer):
+
+   ```
+   clarinet deployments apply --mainnet
+   ```
+
+3. **Register strategies + point at mainnet sBTC** (owner-only calls). The key
+   is derived from `settings/Mainnet.toml` and never printed:
+
+   ```
+   DEPLOYER_KEY=$(node scripts/deployer-key.mjs mainnet) \
+   NETWORK=mainnet \
+   ROUTER=SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router \
+   SBTC=SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token \
+   node scripts/register-strategies.mjs
+   ```
+
+4. **Fund a small yield float** (only needed to demo *withdraw*): transfer a
+   little real sBTC to each strategy contract you'll demo, so it can cover
+   `principal + accrued yield` on withdrawal. A deposit-only demo skips this.
+5. **Point the frontend at mainnet.** `app/.env.mainnet.local` already holds the
+   mainnet env (router, real sBTC token, sponsor key). For a local demo, back up
+   the testnet env and use the mainnet one:
+
+   ```
+   cp app/.env.local app/.env.local.testnet.bak
+   cp app/.env.mainnet.local app/.env.local
+   ```
+
+   (Or set the same vars in the Vercel project for a hosted mainnet demo.)
+6. **Run the demo deposit** with your own sBTC — connect wallet, deposit, sign
+   (gas sponsored, 0 STX from you), confirm the on-chain position.
+7. **Close the window:** `set-strategy-status` each strategy to `false` after
+   recording.
+
+## Summary of env vars (`app/.env.mainnet.local`)
+
+```
+NEXT_PUBLIC_STACKS_NETWORK=mainnet
+NEXT_PUBLIC_HIRO_API_URL=https://api.mainnet.hiro.so
+NEXT_PUBLIC_YIELD_ROUTER_ADDRESS=SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router
+NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS=SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+SPONSOR_PRIVATE_KEY=...   # sponsor account private key (server-only, never commit)
+```
