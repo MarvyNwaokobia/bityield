@@ -1,8 +1,8 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef } from 'react';
 import Link from 'next/link';
-import { motion, useInView, AnimatePresence } from 'framer-motion';
+import { motion, useInView } from 'framer-motion';
 import { ConnectWalletButton } from './components/ConnectWalletButton';
 import { Logo } from './components/Logo';
 import { AnimatedNumber } from './components/AnimatedNumber';
@@ -84,36 +84,6 @@ function StatCard({ value, format, label }: { value: number; format: (n: number)
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email || !email.includes('@')) {
-      setStatus('error');
-      setErrorMsg('Please enter a valid email address.');
-      return;
-    }
-    setStatus('loading');
-    // Simulate API delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    // Store in localStorage for prototype verification
-    try {
-      const waitlist = JSON.parse(localStorage.getItem('bityield-waitlist') || '[]');
-      if (!waitlist.includes(email)) {
-        waitlist.push(email);
-        localStorage.setItem('bityield-waitlist', JSON.stringify(waitlist));
-      }
-      setStatus('success');
-      setEmail('');
-    } catch {
-      setStatus('error');
-      setErrorMsg('Something went wrong. Please try again.');
-    }
-  };
-
   return (
     <div className="bg-[#0a0a0a] text-white min-h-screen">
 
@@ -122,11 +92,11 @@ export default function Home() {
         <Logo />
         <div className="flex items-center gap-5">
           <Link href="/dashboard" className="text-sm text-zinc-400 hover:text-white transition-colors">
-            Launch App
+            Dashboard
           </Link>
           <ConnectWalletButton />
-          <PrimaryLinkButton href="#waitlist" className="px-5 py-2 text-sm">
-            Join the Waitlist
+          <PrimaryLinkButton href="/deposit" className="px-5 py-2 text-sm">
+            Launch App
           </PrimaryLinkButton>
         </div>
       </nav>
@@ -154,12 +124,12 @@ export default function Home() {
             variants={fadeSlideUp}
             className="text-xl md:text-2xl text-zinc-400 max-w-2xl mx-auto mb-10 leading-relaxed"
           >
-            Your idle Bitcoin earns up to 5% APY — paid directly in BTC.
+            Your idle Bitcoin earns up to 8.5% APY — paid directly in BTC.
             No bridges, no tokens, no complexity.
           </motion.p>
           <motion.div variants={fadeSlideUp}>
-            <PrimaryLinkButton href="#waitlist" className="px-10 py-5 text-lg mb-5">
-              Join the Waitlist
+            <PrimaryLinkButton href="/deposit" className="px-10 py-5 text-lg mb-5">
+              Launch App
             </PrimaryLinkButton>
           </motion.div>
           <motion.p variants={fadeSlideUp} className="text-sm text-zinc-500">
@@ -268,7 +238,7 @@ export default function Home() {
           <RevealItem className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
             <h4 className="font-display font-semibold text-lg text-white mb-2">How are the yield rates generated?</h4>
             <p className="text-zinc-400 text-sm leading-relaxed">
-              Your deposits are routed into leading, audited yield protocols on Stacks. Zest Protocol generates yield via institutional Bitcoin lending; Hermetica utilizes low-risk delta-neutral options strategies; Stacks Dual Stacking yields rewards from network Proof-of-Transfer security participation.
+              Today each strategy is a BitYield smart contract that pays a fixed, transparent APY and is labelled &quot;Preview&quot; in the app — you can verify every contract on-chain. Live routing into the underlying protocols (starting with Zest Protocol&apos;s Bitcoin lending, then Hermetica and Dual Stacking) is our next milestone, so deposits will earn real, market-driven protocol yield.
             </p>
           </RevealItem>
 
@@ -281,84 +251,19 @@ export default function Home() {
         </RevealOnScroll>
       </section>
 
-      {/* ── Waitlist CTA ── */}
-      <section id="waitlist" className="py-24 px-6 bg-zinc-950 border-t border-zinc-900">
+      {/* ── Launch CTA ── */}
+      <section id="launch" className="py-24 px-6 bg-zinc-950 border-t border-zinc-900">
         <div className="max-w-xl mx-auto text-center">
-          <h2 className="font-display text-4xl md:text-5xl font-bold mb-4">Be first.</h2>
+          <h2 className="font-display text-4xl md:text-5xl font-bold mb-4">Put your Bitcoin to work.</h2>
           <p className="text-xl text-zinc-400 mb-8 leading-relaxed">
-            BitYield is in active development. Join the waitlist and be among the first
-            Bitcoin holders to put their BTC to work.
+            BitYield is live on Bitcoin mainnet. Connect your wallet, deposit sBTC,
+            and start earning — with zero gas fees to pay.
           </p>
-
-          <AnimatePresence mode="wait">
-            {status === 'success' ? (
-              <motion.div
-                key="success"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-zinc-900/50 border border-bitcoin/30 rounded-2xl p-6 text-center shadow-[0_0_20px_rgba(247,147,26,0.05)]"
-              >
-                <div className="w-12 h-12 rounded-full bg-bitcoin/10 flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-6 h-6 text-bitcoin" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                  </svg>
-                </div>
-                <h3 className="font-display text-lg font-bold mb-1">You&apos;re on the list!</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed">
-                  Thank you for joining. We will notify you as soon as early access opens.
-                </p>
-              </motion.div>
-            ) : (
-              <motion.form
-                key="form"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onSubmit={handleSubmit}
-                className="flex flex-col gap-4 text-left"
-              >
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1 relative">
-                    <input
-                      type="email"
-                      placeholder="Enter your email address"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        if (status === 'error') setStatus('idle');
-                      }}
-                      disabled={status === 'loading'}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-xl px-5 py-4 outline-none text-base transition-all duration-200 focus:border-bitcoin focus:shadow-[0_0_0_3px_rgba(247,147,26,0.15)] disabled:opacity-50"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={status === 'loading'}
-                    className="bg-bitcoin hover:bg-bitcoin/90 text-black font-semibold rounded-xl px-8 py-4 text-base transition-colors flex items-center justify-center min-w-[150px] disabled:opacity-50 cursor-pointer"
-                  >
-                    {status === 'loading' ? (
-                      <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                    ) : (
-                      'Join Waitlist'
-                    )}
-                  </button>
-                </div>
-                {status === 'error' && (
-                  <motion.p
-                    initial={{ opacity: 0, y: -5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-red-500 text-sm pl-1"
-                  >
-                    {errorMsg}
-                  </motion.p>
-                )}
-              </motion.form>
-            )}
-          </AnimatePresence>
-
+          <PrimaryLinkButton href="/deposit" className="px-10 py-5 text-lg">
+            Launch App
+          </PrimaryLinkButton>
           <p className="text-sm text-zinc-600 mt-6">
-            One email when it&apos;s ready. No spam, ever.
+            Non-custodial. Withdraw anytime. No STX required.
           </p>
         </div>
       </section>
