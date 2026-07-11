@@ -6,27 +6,33 @@
 
 [![Built on Stacks](https://img.shields.io/badge/Built%20on-Stacks-orange)](https://stacks.co)
 [![Asset](https://img.shields.io/badge/Asset-sBTC-yellow)](https://stacks.co/sbtc)
-[![Stage](https://img.shields.io/badge/Active-Stacks%20Foundry%3A%20Validate%20Cohort%20May%E2%80%93June%202026-blue)](#validation)
+[![Network](https://img.shields.io/badge/Live%20on-Bitcoin%20Mainnet-brightgreen)](#deployment)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
 ---
 
 ## Status
 
-**v0.1 is live on Stacks testnet.** Connect a Leather wallet, deposit sBTC,
-and watch it accrue yield — withdraw anytime, with every transaction's STX
-fee sponsored so users never need to hold STX.
+**v0.1 is live on Bitcoin mainnet** (Stacks Endowment grant, Milestone 1).
+Connect a Leather wallet, deposit real sBTC, review the yield opportunity and
+risk disclosures, and confirm — with every transaction's STX fee sponsored so
+users never need to hold STX.
 
-- `YieldRouter` contract:
-  [`ST2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219R8QTX0F.yield-router`](https://explorer.hiro.so/txid/ST2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219R8QTX0F.yield-router?chain=testnet)
-- Deposit → position → withdraw verified end-to-end on testnet, including the
-  fee-sponsorship pipeline.
-- The yield strategy is currently **self-contained**: deposited sBTC is held
-  by the contract and accrues a fixed, admin-set APY (5% by default) rather
-  than being routed to Zest, Hermetica, or Dual Stacking yet — see
-  [Roadmap](#roadmap).
+- `YieldRouter` (mainnet):
+  [`SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router`](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet)
+- Router points at the canonical mainnet sBTC token
+  (`SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`); deposit → position
+  → withdraw and the fee-sponsorship pipeline were verified end-to-end on
+  testnet with real sBTC before the mainnet deploy.
+- **Honest scope:** the yield strategies (Zest / Hermetica / Dual Stacking) are
+  currently **BitYield's own strategy contracts**, each paying a fixed,
+  admin-set APY. They *model* the target protocols but do not route to them
+  yet — live protocol integration (starting with **Zest**) is Milestone 2. The
+  app labels these "Preview" and links each strategy contract on the explorer
+  so anyone can verify exactly what it does. See [Roadmap](#roadmap).
 
-See `contracts/DEPLOYMENT.md` for how this was deployed and how to redeploy.
+See [Deployment](#deployment) below and `contracts/DEPLOYMENT.md` for the full
+deploy + verification details.
 
 ---
 
@@ -66,11 +72,12 @@ What the user sees:
 - A single Start Earning button
 - Their earnings denominated in Bitcoin
 
-What BitYield handles invisibly:
-- sBTC bridge: converting BTC to sBTC for Stacks protocols
-- Gas fees: fee abstraction so no STX is required from the user
-- Protocol routing: finding the best yield across Zest, Hermetica, Dual Stacking
-- Position tracking: displaying yield in BTC terms the user understands
+What BitYield handles for the user:
+- Gas fees: fee abstraction so **no STX** is required from the user (live)
+- sBTC on-ramp: links out to the official sBTC bridge to convert BTC → sBTC (live)
+- Position tracking: yield shown in BTC terms the user understands (live)
+- Protocol routing: routing deposits to the best live yield across Zest,
+  Hermetica, and Dual Stacking (roadmap — see [Status](#status))
 
 ---
 
@@ -114,9 +121,9 @@ High-level flow:
   Bitcoin Holder
         |
         v
-  BitYield Dashboard (Next.js 14)
+  BitYield Dashboard (Next.js 16)
         |
-        |-- Leather Wallet SDK -- sBTC bridge (invisible to user)
+        |-- Leather Wallet SDK -- links to sBTC bridge (BTC → sBTC)
         |
         |-- YieldRouter (Clarity smart contract)
         |       |-- Zest Protocol    lending yield
@@ -128,26 +135,30 @@ High-level flow:
                 |-- BTC-denominated portfolio view
                 |-- One-tap withdrawal
 
-The target design: YieldRouter is a routing and accounting layer only,
-BitYield never holds user funds, and positions are held by the underlying
-protocols. **v0.1 implements the accounting layer and a self-contained
-"mock-yield" strategy** — deposited sBTC is held by YieldRouter itself and
-accrues a fixed, admin-settable APY (5% by default), computed linearly from
-elapsed block height. The `strategy` field on each position is already
-recorded so real protocol routing (Zest, Hermetica, Dual Stacking) can be
-added as additional strategies without migrating existing positions.
+The design: `YieldRouter` is a routing and accounting layer that delegates
+custody and yield to **pluggable strategy contracts** (each implements a shared
+`yield-strategy-trait`). This is the key to the roadmap — a new strategy (e.g.
+real Zest routing) is added with a single `add-strategy` admin call on the
+**same** router; existing positions never migrate and the router is never
+redeployed. **v0.1 ships four registered strategies** (`zest`, `hermetica`,
+`dual-stacking`, `mock-yield`); each is currently a self-contained contract
+paying a fixed, admin-set APY computed linearly from elapsed block height.
+Milestone 2 swaps the `zest` strategy's implementation for one that actually
+supplies into Zest Protocol — no router change required.
 
 Core Clarity interface (as deployed):
 
-  (define-public (deposit (amount uint) (strategy (string-ascii 20)) (token <sip-010-trait>))
-    ;; Transfer sBTC from caller to the contract
-    ;; Record position with entry block height and current APY
+  (define-public (deposit (amount uint) (strategy-name (string-ascii 20))
+                          (strategy <yield-strategy-trait>) (token <sip-010-trait>))
+    ;; Verify strategy is registered + active and matches strategy-name
+    ;; Transfer sBTC from caller to the strategy contract
+    ;; Call the strategy's deposit; record position (entry block, APY)
     ;; Return position-id
   )
 
-  (define-public (withdraw (position-id uint) (token <sip-010-trait>))
-    ;; Verify caller owns the open position
-    ;; Transfer principal + accrued yield back to caller
+  (define-public (withdraw (position-id uint) (strategy <yield-strategy-trait>) (token <sip-010-trait>))
+    ;; Verify caller owns the open position and the strategy matches
+    ;; Delegate to the strategy: return principal + accrued yield to caller
     ;; Mark position closed
   )
 
@@ -155,9 +166,8 @@ Core Clarity interface (as deployed):
     ;; Return: amount, strategy, entry-block, apy-bps, closed
   )
 
-  (define-read-only (get-best-rate)
-    ;; Return: strategy-name, current apy-bps, tvl
-    ;; (v0.1: always the mock-yield strategy)
+  (define-read-only (get-strategy (name (string-ascii 20)))
+    ;; Return the registered { contract, active } for a strategy name
   )
 
 Frontend pages:
@@ -173,78 +183,109 @@ Frontend pages:
 
 ## Protocol integrations
 
-| Protocol                                    | Role                          | Integration type       |
+| Protocol                                    | Role                          | Status                 |
 |---------------------------------------------|-------------------------------|------------------------|
-| Zest Protocol (zestprotocol.com)            | Primary lending yield         | Clarity contract call  |
-| Hermetica (hermetica.fi)                    | Structured BTC yield          | Clarity contract call  |
-| Dual Stacking (stacks.co)                   | PoX yield                     | Clarity contract call  |
-| Leather Wallet (leather.io)                 | Wallet and sBTC bridge UX     | SDK                    |
-| Hiro Systems (hiro.so)                      | Stacks.js, API, Clarinet      | Developer infrastructure|
-| Circle USDCx                                | Stablecoin yield path v2      | Future track           |
-| Bitflow (bitflow.finance)                   | sBTC/USDCx liquidity          | Future track           |
+| Leather Wallet (leather.io)                 | Wallet + sBTC bridge link     | **Live** (SDK)         |
+| Hiro Systems (hiro.so)                      | Stacks.js, API, Clarinet      | **Live** (infra)       |
+| sBTC (stacks.co/sbtc)                       | 1:1 Bitcoin-backed deposit asset | **Live** (mainnet token) |
+| Zest Protocol (zestprotocol.com)            | Primary lending yield         | Roadmap — Milestone 2  |
+| Hermetica (hermetica.fi)                    | Structured BTC yield          | Roadmap                |
+| Dual Stacking (stacks.co)                   | PoX yield                     | Roadmap                |
+| Circle USDCx / Bitflow                      | Stablecoin yield path         | Future track           |
 
 ---
 
-## Validation
+## Milestone 1 — Stacks Endowment grant
 
-BitYield has been accepted into Stacks Foundry: Validate, a 5-week program by
-the Stacks Endowment for early-stage builders. The project is now in active
-Week 1 discovery.
+Milestone 1 delivers a **mainnet-ready deposit flow** from wallet connection
+through deposit confirmation. Mapping to the acceptance criteria:
 
-Core assumption being tested:
+| Acceptance criterion | Where it lives |
+|----------------------|----------------|
+| Connect a wallet | Leather / Stacks Connect — `/deposit`, `/dashboard` |
+| View a yield opportunity + expected rate | Strategy cards on `/deposit` (APY, provider modelled, risk) |
+| Review deposit details + **risk information** | Deposit preview + **Risk & disclosures** panel on confirm |
+| Confirm a deposit flow | `deposit` contract call, sponsored, with pending/success states |
+| No manual STX for gas (fee abstraction) | Sponsored transactions — `app/app/api/sponsor-tx` |
+| Complete in a mainnet-ready environment | Contracts live on mainnet (see [Deployment](#deployment)) |
+| Public repo + demo | This repo + demo video below |
 
-  The barrier to Bitcoin yield on Stacks is a UX and communication problem,
-  not a trust or risk problem. A sufficiently simple interface with honest
-  framing will convert passive BTC holders into active sBTC depositors.
+**Demo video:** _(link coming — records the full mainnet deposit flow)_
 
-Validation plan by week:
+To test it yourself: connect a Stacks wallet holding a small amount of sBTC,
+open `/deposit`, pick a strategy, and confirm. You pay **no STX** — the fee is
+sponsored. The resulting position is visible on `/dashboard` and on the
+[explorer](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet).
 
-| Week | Focus                | What we are testing                        |
-|------|----------------------|--------------------------------------------|
-| 1    | Discovery interviews | What is the real hesitation?               |
-| 2    | Problem framing      | Does your Bitcoin stays Bitcoin land?      |
-| 3    | Concept test         | Does the mockup convert?                   |
-| 4    | Prototype test       | Does the flow complete on testnet?         |
-| 5    | Decision             | Build, pivot, narrow, or stop              |
+---
 
-Success criteria:
+## Deployment
 
-| Signal                                    | Threshold |
-|-------------------------------------------|-----------|
-| Clicks Start Earning in concept test      | > 40%     |
-| Completes deposit on testnet              | > 25%     |
-| Cites too complicated as reason to stop   | < 20%     |
-| Would recommend to another BTC holder     | > 50%     |
+**Mainnet** — deployer `SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN`
+([explorer](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet)):
 
-See docs/validation-plan.md for the full research protocol.
+| Contract | Role |
+|----------|------|
+| `yield-router` | Non-custodial routing + accounting layer |
+| `zest-strategy` / `hermetica-strategy` / `dual-stacking-strategy` | Preview strategies (fixed APY; model the named protocols) |
+| `mock-yield-strategy` | Self-contained 5% strategy |
+| `yield-strategy-trait` / `sip-010-trait` | Shared traits |
+
+The router is pointed at the canonical mainnet sBTC token
+`SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`, and all four strategies
+are registered and active — verify with the router's `get-strategy` /
+`get-sbtc-token` read-only functions on the explorer.
+
+Full deploy + registration steps (testnet and mainnet), and how to redeploy,
+are in [`contracts/DEPLOYMENT.md`](contracts/DEPLOYMENT.md).
+
+---
+
+## Setup & running locally
+
+```
+# 1. Contracts — run the Clarity test suite (in-memory simnet, no funds needed)
+cd contracts && npm install && npm test
+
+# 2. Frontend
+cd app && npm install
+cp .env.example .env.local     # then fill in the values below
+npm run dev                    # http://localhost:3000
+```
+
+Required `app/.env.local` values (see `app/.env.example` and
+`contracts/DEPLOYMENT.md`):
+
+```
+NEXT_PUBLIC_STACKS_NETWORK=mainnet            # or testnet
+NEXT_PUBLIC_YIELD_ROUTER_ADDRESS=SP360...yield-router
+NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS=SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+SPONSOR_PRIVATE_KEY=...        # server-only; funds the fee-abstraction sponsor
+```
+
+Strategy contract addresses are derived from the router's deployer prefix
+automatically (`app/lib/stacks/network.ts`).
 
 ---
 
 ## Roadmap
 
-Validation stage: May to June 2026
-- [ ] User discovery interviews with 20 to 30 non-technical BTC holders
-- [ ] Problem framing and message testing
-- [x] Prototype deposit + withdraw flow on Stacks testnet
-- [ ] Validate or invalidate core assumption
-
-v0.1: shipped ahead of schedule (June 2026)
-- [x] YieldRouter Clarity contract deployed on testnet
-- [x] Next.js frontend with deposit, withdraw, and dashboard
-- [x] Leather Wallet integration
+**Milestone 1 — mainnet-ready deposit flow (shipped)**
+- [x] YieldRouter + pluggable strategy contracts deployed on **Bitcoin mainnet**
+- [x] Next.js frontend: deposit, withdraw, dashboard
+- [x] Leather Wallet integration, real on-chain sBTC balances
 - [x] Fee abstraction via sponsored transactions (no STX required from users)
-- [ ] Zest Protocol as primary yield option (still the self-contained
-      mock-yield strategy — see [Status](#status))
+- [x] Deposit preview, confirmation, and risk/audit disclosures
+- [ ] Demo video of the full mainnet deposit flow
 
-v0.2: August 2026
-- [ ] Hermetica integration
-- [ ] Dual Stacking integration
-- [x] Portfolio dashboard
-- [x] Withdrawal flow
+**Milestone 2 — real protocol routing**
+- [ ] Route the `zest` strategy into live **Zest Protocol** lending (real BTC yield)
+- [ ] Read live APY/TVL from the protocol instead of a fixed rate
+- [ ] Independent audit of the routing contracts before public launch
+- [ ] Move contract ownership to a multisig / cold wallet
 
-v1.0: Q4 2026
-- [ ] Mainnet deployment
-- [x] Fee abstraction using sBTC for gas (testnet — sponsored transactions)
+**Later**
+- [ ] Hermetica and Dual Stacking live integrations
 - [ ] Mobile-optimized UX
 - [ ] USDCx stablecoin yield path
 
@@ -268,7 +309,7 @@ everyone else.
 | Layer          | Technology                              |
 |----------------|-----------------------------------------|
 | Smart contracts| Clarity on Stacks blockchain            |
-| Frontend       | Next.js 14, TypeScript, Tailwind CSS    |
+| Frontend       | Next.js 16, TypeScript, Tailwind CSS    |
 | Wallet         | Leather Wallet, Stacks.js               |
 | Testing        | Clarinet for contracts, Vitest frontend |
 | Data           | Hiro Stacks Extended API, DeFiLlama     |
@@ -278,9 +319,8 @@ everyone else.
 
 ## Contributing
 
-BitYield is in the validation stage. Contributions to research, design,
-and documentation are welcome now. Engineering contributions will open
-after validation is complete and the build decision is made.
+BitYield is an active grant project (Stacks Endowment). Issues and PRs for the
+frontend, contracts, and docs are welcome. See `CONTRIBUTING.md`.
 
 ---
 
@@ -291,4 +331,4 @@ MIT
 ---
 
 *Built on Stacks — Bitcoin's leading L2*
-*Active in Stacks Foundry: Validate — May–June 2026*
+*Live on Bitcoin mainnet — Stacks Endowment grant, Milestone 1*
