@@ -79,3 +79,16 @@ export const STRATEGIES: Record<StrategyName, ContractRef | null> = {
   "hermetica": HERMETICA_STRATEGY,
   "dual-stacking": DUAL_STRATEGY,
 };
+
+// Hiro explorer link for a "<address>.<contract-name>" id, so users can verify
+// exactly what a strategy contract does on-chain.
+export function explorerContractUrl(contractId: string): string {
+  const chain = NETWORK_NAME === "mainnet" ? "mainnet" : "testnet";
+  return `https://explorer.hiro.so/txid/${contractId}?chain=${chain}`;
+}
+
+// Resolves a strategy name to the deployed contract id, or null if unset.
+export function strategyContractId(name: StrategyName): string | null {
+  const ref = STRATEGIES[name];
+  return ref ? toContractId(ref) : null;
+}

@@ -13,7 +13,7 @@ import { ConnectPrompt } from '../components/ConnectPrompt';
 import { ErrorCard, PendingCard, SuccessCard } from '../components/TransactionStatus';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { PrimaryButton, SecondaryButton } from '../components/Button';
-import { StrategyName, SBTC_ACQUIRE_URL, NETWORK_NAME } from '@/lib/stacks/network';
+import { StrategyName, SBTC_ACQUIRE_URL, NETWORK_NAME, explorerContractUrl, strategyContractId, YIELD_ROUTER, toContractId } from '@/lib/stacks/network';
 
 type Step = 'amount' | 'confirm' | 'pending' | 'success' | 'error';
 
@@ -21,15 +21,18 @@ interface StrategyOption {
   id: StrategyName;
   name: string;
   apy: number;
-  provider: string;
+  targetProtocol: string;
   risk: 'Low' | 'Medium';
   desc: string;
 }
 
+// Honest descriptions: these are BitYield's own strategy contracts today, each
+// paying a fixed APY. They model the target protocols but do not route to them
+// yet — live integration is v0.2. See the Risk & disclosures panel on confirm.
 const STRATEGY_OPTIONS: StrategyOption[] = [
-  { id: 'zest', name: 'Zest Lending', apy: 4.5, provider: 'Zest Protocol', risk: 'Low', desc: 'Lend your sBTC to audited institutional borrowers for native yield.' },
-  { id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, provider: 'Hermetica Options', risk: 'Medium', desc: 'Earn options premium from an automated, delta-neutral strategy.' },
-  { id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, provider: 'Stacks Staking', risk: 'Low', desc: 'Secure the Stacks network through PoX Stacking to receive BTC yield.' }
+  { id: 'zest', name: 'Zest Lending', apy: 4.5, targetProtocol: 'Zest Protocol', risk: 'Low', desc: 'Models Zest lending yield. Today a BitYield strategy contract paying a fixed 4.5% APY — live Zest routing ships in v0.2.' },
+  { id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY — live routing ships in v0.2.' },
+  { id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', desc: 'Models Dual Stacking PoX yield. Today a BitYield strategy contract paying a fixed 8.5% APY — live routing ships in v0.2.' }
 ];
 
 export default function DepositPage() {
@@ -237,19 +240,33 @@ export default function DepositPage() {
                             }`}
                           >
                             <div className="space-y-1 pr-4">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-semibold text-sm">{opt.name}</span>
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
                                   opt.risk === 'Low' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                                 }`}>
                                   {opt.risk} Risk
                                 </span>
+                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
+                                  Preview
+                                </span>
                               </div>
                               <p className="text-xs text-zinc-500 leading-snug">{opt.desc}</p>
+                              {strategyContractId(opt.id) && (
+                                <a
+                                  href={explorerContractUrl(strategyContractId(opt.id)!)}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="inline-block text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline"
+                                >
+                                  Verify contract on-chain ↗
+                                </a>
+                              )}
                             </div>
                             <div className="text-right">
                               <span className="font-display text-lg font-bold text-bitcoin whitespace-nowrap">{opt.apy}% APY</span>
-                              <p className="text-[10px] text-zinc-500 uppercase tracking-widest">{opt.provider}</p>
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Models {opt.targetProtocol}</p>
                             </div>
                           </div>
                         ))}
@@ -335,6 +352,57 @@ export default function DepositPage() {
                     <p className="leading-relaxed mt-0.5">
                       This transaction is fully sponsored. You do not need to hold or spend STX to pay for Stacks network transaction fees.
                     </p>
+                  </div>
+                </div>
+
+                {/* Risk & disclosures — honest statement of what this deposit does today */}
+                <div className="bg-zinc-950 border border-amber-500/20 rounded-xl p-4 mb-8 space-y-3">
+                  <p className="font-semibold text-white text-sm flex items-center gap-1.5">
+                    <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                    </svg>
+                    Risk &amp; disclosures
+                  </p>
+                  <ul className="text-xs text-zinc-400 space-y-2 leading-relaxed list-disc pl-4">
+                    <li>
+                      <span className="text-zinc-300 font-medium">Preview strategy.</span> {selectedStrategyOption.name} is
+                      a BitYield strategy contract paying a fixed {apy}% APY. It models {selectedStrategyOption.targetProtocol} but
+                      does not route to it yet — live protocol integration is planned for v0.2. The rate is set by the contract, not live market yield.
+                    </li>
+                    <li>
+                      <span className="text-zinc-300 font-medium">Custody.</span> Your sBTC is transferred to the strategy
+                      contract and recorded to your address. Only you can withdraw your position, principal plus accrued yield.
+                    </li>
+                    <li>
+                      <span className="text-zinc-300 font-medium">Smart-contract risk.</span> These contracts are running on
+                      {NETWORK_NAME === 'mainnet' ? ' mainnet' : ' Stacks testnet'} and are not yet independently audited. Deposit only what you are comfortable testing with.
+                    </li>
+                    <li>
+                      <span className="text-zinc-300 font-medium">Your Bitcoin stays on Bitcoin L1.</span> sBTC is 1:1
+                      Bitcoin-backed and secured by Bitcoin L1 consensus — no third-party wrapping or bridge custodian.
+                    </li>
+                  </ul>
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
+                    {strategyContractId(selectedStrategy) && (
+                      <a
+                        href={explorerContractUrl(strategyContractId(selectedStrategy)!)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline"
+                      >
+                        Verify strategy contract ↗
+                      </a>
+                    )}
+                    {YIELD_ROUTER && (
+                      <a
+                        href={explorerContractUrl(toContractId(YIELD_ROUTER))}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline"
+                      >
+                        Verify router contract ↗
+                      </a>
+                    )}
                   </div>
                 </div>
 
