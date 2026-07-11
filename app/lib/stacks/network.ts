@@ -13,6 +13,14 @@ export const HIRO_API_URL =
   process.env.NEXT_PUBLIC_HIRO_API_URL ??
   (NETWORK_NAME === "mainnet" ? "https://api.mainnet.hiro.so" : "https://api.testnet.hiro.so");
 
+// Where a user actually acquires sBTC. On mainnet this is the official sBTC
+// bridge (send BTC, receive 1:1 sBTC); on testnet the Hiro Platform faucet
+// dispenses testnet sBTC directly. BitYield does not bridge funds itself — it
+// links out to the real flow rather than simulating one.
+export const SBTC_ACQUIRE_URL =
+  process.env.NEXT_PUBLIC_SBTC_ACQUIRE_URL ??
+  (NETWORK_NAME === "mainnet" ? "https://sbtc.stacks.co" : "https://platform.hiro.so");
+
 // Set after running `clarinet deployments apply --testnet` — see contracts/DEPLOYMENT.md.
 export const YIELD_ROUTER_ADDRESS = process.env.NEXT_PUBLIC_YIELD_ROUTER_ADDRESS ?? "";
 

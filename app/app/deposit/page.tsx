@@ -6,17 +6,16 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
 import { getSbtcBalanceSats } from '@/lib/stacks/balances';
 import { submitDepositTx, type TxPhase } from '@/lib/stacks/tx';
-import { satsToBtc, SATS_PER_BTC, formatBtc } from '@/lib/stacks/format';
+import { satsToBtc, SATS_PER_BTC } from '@/lib/stacks/format';
 import { fadeSlideUp, staggerContainer } from '@/lib/motion';
 import { Logo } from '../components/Logo';
 import { ConnectPrompt } from '../components/ConnectPrompt';
 import { ErrorCard, PendingCard, SuccessCard } from '../components/TransactionStatus';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { PrimaryButton, SecondaryButton } from '../components/Button';
-import { StrategyName } from '@/lib/stacks/network';
+import { StrategyName, SBTC_ACQUIRE_URL, NETWORK_NAME } from '@/lib/stacks/network';
 
 type Step = 'amount' | 'confirm' | 'pending' | 'success' | 'error';
-type BridgeStep = 'idle' | 'setup' | 'send' | 'confirming' | 'success';
 
 interface StrategyOption {
   id: StrategyName;
@@ -43,11 +42,6 @@ export default function DepositPage() {
   const [phase, setPhase] = useState<TxPhase>('signing');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [depositedSats, setDepositedSats] = useState(0);
-
-  // sBTC Bridge Assistant state
-  const [bridgeStep, setBridgeStep] = useState<BridgeStep>('idle');
-  const [bridgeAmount, setBridgeAmount] = useState('0.1');
-  const [blocksConfirmed, setBlocksConfirmed] = useState(0);
 
   const refreshBalance = useCallback(async () => {
     if (!address) return;
@@ -104,35 +98,6 @@ export default function DepositPage() {
     }
   };
 
-  // Bridge simulation
-  useEffect(() => {
-    if (bridgeStep === 'confirming') {
-      const interval = setInterval(() => {
-        setBlocksConfirmed((prev) => {
-          if (prev >= 6) {
-            clearInterval(interval);
-            // Complete bridge: add to mock sBTC balance
-            if (address) {
-              const currentMock = BigInt(localStorage.getItem(`mock-sbtc-balance-${address}`) || '0');
-              const addedSats = BigInt(Math.round(Number(bridgeAmount) * SATS_PER_BTC));
-              localStorage.setItem(`mock-sbtc-balance-${address}`, (currentMock + addedSats).toString());
-            }
-            setBridgeStep('success');
-            return 6;
-          }
-          return prev + 1;
-        });
-      }, 1500);
-      return () => clearInterval(interval);
-    }
-  }, [bridgeStep, bridgeAmount, address]);
-
-  const handleResetBridge = async () => {
-    setBridgeStep('idle');
-    setBlocksConfirmed(0);
-    await refreshBalance();
-  };
-
   return (
     <div className="bg-[#0a0a0a] text-white min-h-screen flex flex-col">
       <nav className="px-6 py-4 flex items-center justify-between border-b border-zinc-800/50">
@@ -167,7 +132,7 @@ export default function DepositPage() {
               </motion.div>
             )}
 
-            {isConnected && step === 'amount' && balanceSats !== null && bridgeStep === 'idle' && (
+            {isConnected && step === 'amount' && balanceSats !== null && (
               <motion.div
                 key="amount"
                 initial="initial"
@@ -184,12 +149,14 @@ export default function DepositPage() {
                     <p className="font-display text-4xl font-bold">
                       <AnimatedNumber value={balanceBtc} formatter={(n) => n.toFixed(8)} /> BTC
                     </p>
-                    <button
-                      onClick={() => setBridgeStep('setup')}
+                    <a
+                      href={SBTC_ACQUIRE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="text-bitcoin border border-bitcoin/20 hover:bg-bitcoin/10 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer"
                     >
-                      Bridge BTC → sBTC
-                    </button>
+                      Get sBTC ↗
+                    </a>
                   </div>
                 </div>
 
@@ -201,11 +168,26 @@ export default function DepositPage() {
                       </svg>
                     </div>
                     <p className="text-zinc-400 text-sm leading-relaxed">
-                      You don&apos;t have any sBTC in your wallet. Use the BitYield Bridge Assistant to convert your L1 BTC.
+                      You don&apos;t have any sBTC in this wallet yet. sBTC is 1:1 Bitcoin-backed —
+                      get some via the {NETWORK_NAME === 'mainnet' ? 'official sBTC bridge' : 'Hiro testnet faucet'},
+                      then come back and refresh.
                     </p>
-                    <PrimaryButton onClick={() => setBridgeStep('setup')} className="px-6 py-2.5 text-sm w-full">
-                      Launch Bridge Assistant
-                    </PrimaryButton>
+                    <a
+                      href={SBTC_ACQUIRE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="block"
+                    >
+                      <PrimaryButton className="px-6 py-2.5 text-sm w-full">
+                        {NETWORK_NAME === 'mainnet' ? 'Open sBTC Bridge ↗' : 'Open Testnet Faucet ↗'}
+                      </PrimaryButton>
+                    </a>
+                    <button
+                      onClick={refreshBalance}
+                      className="text-zinc-400 hover:text-white text-sm cursor-pointer transition-colors"
+                    >
+                      I&apos;ve got sBTC — refresh balance
+                    </button>
                   </div>
                 ) : (
                   <>
@@ -299,154 +281,6 @@ export default function DepositPage() {
               </motion.div>
             )}
 
-            {/* sBTC Bridge Wizard */}
-            {isConnected && bridgeStep !== 'idle' && (
-              <motion.div
-                key="bridge"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={fadeSlideUp}
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6"
-              >
-                <div className="flex justify-between items-center border-b border-zinc-800 pb-4">
-                  <div>
-                    <h3 className="font-display text-lg font-bold text-bitcoin">sBTC Bridge Assistant</h3>
-                    <p className="text-zinc-500 text-xs mt-0.5">Convert native BTC to Stacks sBTC</p>
-                  </div>
-                  {bridgeStep !== 'confirming' && (
-                    <button onClick={handleResetBridge} className="text-zinc-500 hover:text-white text-xs cursor-pointer">
-                      Cancel
-                    </button>
-                  )}
-                </div>
-
-                {bridgeStep === 'setup' && (
-                  <div className="space-y-6">
-                    <div className="space-y-2">
-                      <label htmlFor="bridgeAmount" className="block text-sm text-zinc-400">
-                        Amount to peg-in (BTC)
-                      </label>
-                      <div className="flex items-center gap-2 bg-black border border-zinc-800 rounded-xl px-4 py-3.5 focus-within:border-bitcoin">
-                        <input
-                          id="bridgeAmount"
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          value={bridgeAmount}
-                          onChange={(e) => setBridgeAmount(e.target.value)}
-                          className="bg-transparent flex-1 outline-none text-lg font-mono text-white"
-                        />
-                        <span className="text-zinc-500 font-mono text-sm">BTC</span>
-                      </div>
-                      <p className="text-zinc-500 text-[11px] leading-relaxed">
-                        Gas fees sponsored by BitYield. Zero STX or BTC fee required from your Stacks account.
-                      </p>
-                    </div>
-
-                    <PrimaryButton onClick={() => setBridgeStep('send')} className="w-full py-4">
-                      Initiate Peg-in
-                    </PrimaryButton>
-                  </div>
-                )}
-
-                {bridgeStep === 'send' && (
-                  <div className="space-y-6 text-center">
-                    <p className="text-sm text-zinc-400 leading-relaxed text-left">
-                      Send exactly <span className="text-white font-mono font-semibold">{bridgeAmount} BTC</span> from your L1 Bitcoin wallet to the official Stacks bridge address:
-                    </p>
-
-                    <div className="bg-black border border-zinc-800 rounded-xl p-4 font-mono text-xs select-all break-all text-center flex items-center justify-between gap-2">
-                      <span className="text-bitcoin">tb1qpegx6m9g27j2kmv6g7sw0lmd8v5kxpqxsbtc</span>
-                    </div>
-
-                    <div className="w-32 h-32 bg-white rounded-xl mx-auto flex items-center justify-center shadow-lg p-2">
-                      {/* Generated SVG QR Code representation */}
-                      <svg className="w-full h-full text-black" viewBox="0 0 100 100" fill="currentColor">
-                        <rect x="10" y="10" width="20" height="20" />
-                        <rect x="70" y="10" width="20" height="20" />
-                        <rect x="10" y="70" width="20" height="20" />
-                        <rect x="30" y="30" width="10" height="10" />
-                        <rect x="40" y="50" width="20" height="10" />
-                        <rect x="60" y="30" width="10" height="20" />
-                        <rect x="30" y="70" width="20" height="10" />
-                        <rect x="70" y="70" width="10" height="10" />
-                      </svg>
-                    </div>
-
-                    <div className="bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-500 text-left space-y-2">
-                      <p className="font-semibold text-white">How to complete:</p>
-                      <p>1. Send the transaction using Leather, Xverse, or a Bitcoin hardware wallet.</p>
-                      <p>2. Once broadcasted, click <span className="text-bitcoin font-semibold">Verify Deposit</span> to simulate mining confirmation blocks on Stacks L2.</p>
-                    </div>
-
-                    <PrimaryButton onClick={() => setBridgeStep('confirming')} className="w-full py-4">
-                      Verify Deposit & Simulate
-                    </PrimaryButton>
-                  </div>
-                )}
-
-                {bridgeStep === 'confirming' && (
-                  <div className="text-center py-6 space-y-6">
-                    <div className="relative w-16 h-16 mx-auto flex items-center justify-center">
-                      <div className="absolute inset-0 border-4 border-zinc-800 border-t-bitcoin rounded-full animate-spin" />
-                      <span className="text-bitcoin font-bold text-xs">{blocksConfirmed}/6</span>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-semibold">Simulating Peg-in Confirmations</h4>
-                      <p className="text-zinc-400 text-xs max-w-sm mx-auto leading-relaxed">
-                        Waiting for miners to anchor your Bitcoin transaction to the Stacks ledger. Normally takes ~10 minutes per block, simulated here.
-                      </p>
-                    </div>
-
-                    <div className="bg-black rounded-xl p-4 text-left font-mono text-xs space-y-2">
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500">L1 TX Status:</span>
-                        <span className="text-emerald-400">Broadcasted</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500">Confirmations:</span>
-                        <span>{blocksConfirmed} / 6 Stacks blocks</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-zinc-500">sBTC Mint Queue:</span>
-                        <span className={blocksConfirmed === 6 ? 'text-emerald-400' : 'text-zinc-500'}>
-                          {blocksConfirmed === 6 ? 'Executed' : 'Pending'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {bridgeStep === 'success' && (
-                  <div className="text-center py-6 space-y-6">
-                    <div className="w-14 h-14 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
-                      <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 12.75 6 6 9-13.5" />
-                      </svg>
-                    </div>
-
-                    <div className="space-y-2">
-                      <h4 className="font-semibold text-lg text-emerald-400">sBTC Peg-in Successful!</h4>
-                      <p className="text-zinc-400 text-xs leading-relaxed max-w-xs mx-auto">
-                        You have successfully minted {bridgeAmount} sBTC. It is now available in your Stacks wallet balance.
-                      </p>
-                    </div>
-
-                    <div className="bg-black rounded-xl p-4 font-mono text-xs text-zinc-400 space-y-1.5 text-left">
-                      <p>• Mint Amount: {bridgeAmount} sBTC</p>
-                      <p>• Gas Fee: 0 STX (Sponsored)</p>
-                      <p>• Status: Confirmed & Completed</p>
-                    </div>
-
-                    <PrimaryButton onClick={handleResetBridge} className="w-full py-4">
-                      Return to Deposit Page
-                    </PrimaryButton>
-                  </div>
-                )}
-              </motion.div>
-            )}
 
             {step === 'confirm' && (
               <motion.div
