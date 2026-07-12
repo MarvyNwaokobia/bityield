@@ -70,13 +70,13 @@ const INFRA = [
 const FAQ = [
   { q: 'Does my Bitcoin leave the Bitcoin network?', a: 'No. sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1 consensus. You hold it under your own keys — no third-party custodian and no wrapped-token bridge risk.' },
   { q: 'Why don’t I pay gas in STX?', a: 'BitYield sponsors every transaction. When you sign a deposit or withdrawal, our sponsor account pays the STX network fee for you — so you never need to hold STX.' },
-  { q: 'How are the yield rates generated today?', a: 'Each strategy is currently a BitYield smart contract paying a fixed, transparent APY, labelled “Preview” in the app and fully verifiable on-chain. Live routing into the underlying protocols (Zest first) is our next milestone.' },
-  { q: 'Can I withdraw at any time?', a: 'Yes. Positions are non-custodial and open-ended — trigger a withdrawal from your dashboard and your principal plus any accrued yield returns to your wallet.' },
-  { q: 'What is sBTC, and how do I get it?', a: 'sBTC is a 1:1 Bitcoin-backed asset on Stacks. You get it by sending BTC through the official sBTC bridge (sbtc.stacks.co) — BitYield links you straight there from the deposit screen.' },
-  { q: 'Which wallets are supported?', a: 'Any Stacks wallet works. We recommend Leather; Xverse is also supported. Connect in one tap — there is no separate BitYield account to create.' },
-  { q: 'Is BitYield audited?', a: 'The contracts are deployed on mainnet and fully public — you can read and verify every one on the explorer (see the Proof page). They are not yet independently audited, so deposit amounts you are comfortable testing with; a formal audit is planned before a wider rollout.' },
-  { q: 'Are there lock-ups, minimums, or hidden fees?', a: 'No lock-up and no enforced minimum — deposit and withdraw whenever you like. Gas is sponsored, so you pay no network fees, and there are no deposit or withdrawal charges.' },
-  { q: 'What happens to my funds if BitYield goes away?', a: 'Your position lives in an on-chain smart contract, keyed to your address — not on our servers. Even if the BitYield front end disappeared, only you can withdraw your position by calling the contract directly.' },
+  { q: 'How are the yield rates generated today?', a: 'Each strategy is a BitYield smart contract paying a fixed, transparent APY today — clearly labelled “Preview” and fully verifiable on-chain. Next, we route deposits into live protocols (starting with Zest) so your yield comes straight from the market.' },
+  { q: 'Can I withdraw at any time?', a: 'Yes, always. Positions are non-custodial and open-ended — trigger a withdrawal from your dashboard and your principal plus any accrued yield returns to your wallet. No lock-ups, no waiting periods.' },
+  { q: 'What is sBTC, and how do I get it?', a: 'sBTC is Bitcoin on Stacks — 1:1 Bitcoin-backed, so 1 sBTC always equals 1 BTC. You get it by sending BTC through the official sBTC bridge (sbtc.stacks.co), and BitYield links you straight there from the deposit screen.' },
+  { q: 'Which wallets are supported?', a: 'Any Stacks wallet works — we recommend Leather, and Xverse is supported too. Connect in one tap; there is no separate BitYield account to create.' },
+  { q: 'Is BitYield safe to use?', a: 'BitYield is non-custodial by design: your funds live in open, on-chain smart contracts that only you can withdraw from — never on our servers. Every contract is public and verifiable on the explorer (see the Proof page), and we have deliberately kept them simple and transparent. A third-party security audit is on our roadmap as we scale.' },
+  { q: 'Are there lock-ups, minimums, or hidden fees?', a: 'None. Deposit and withdraw whenever you like, in any amount. Gas is fully sponsored, so you pay no network fees — and there are no deposit or withdrawal charges.' },
+  { q: 'What happens to my funds if BitYield goes away?', a: 'They stay yours. Your position lives in an on-chain smart contract keyed to your address — not on our servers — so even if the BitYield app disappeared, only you can withdraw your funds by calling the contract directly.' },
 ];
 
 // ─── Pieces ──────────────────────────────────────────────────────────────────
@@ -172,6 +172,32 @@ function LiveProof() {
 
 function SectionLabel({ children }: { children: ReactNode }) {
   return <p className="text-bitcoin font-mono text-xs uppercase tracking-widest mb-3">{children}</p>;
+}
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden transition-colors hover:border-zinc-700">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-4 text-left px-6 py-5 cursor-pointer"
+      >
+        <span className="font-display font-semibold text-base md:text-lg text-white">{q}</span>
+        <span className={`shrink-0 text-bitcoin transition-transform duration-300 ${open ? 'rotate-180' : ''}`}>
+          <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+          </svg>
+        </span>
+      </button>
+      <div className={`grid transition-[grid-template-rows] duration-300 ease-out ${open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden">
+          <p className="text-zinc-400 text-sm leading-relaxed px-6 pb-5">{a}</p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -341,11 +367,10 @@ export default function Home() {
             <SectionLabel>FAQ</SectionLabel>
             <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Good questions.</h2>
           </RevealOnScroll>
-          <RevealOnScroll stagger className="space-y-4">
+          <RevealOnScroll stagger className="space-y-3">
             {FAQ.map(({ q, a }) => (
-              <RevealItem key={q} className="bg-zinc-900/40 border border-zinc-800 rounded-2xl p-6">
-                <h3 className="font-display font-semibold text-lg text-white mb-2">{q}</h3>
-                <p className="text-zinc-400 text-sm leading-relaxed">{a}</p>
+              <RevealItem key={q}>
+                <FaqItem q={q} a={a} />
               </RevealItem>
             ))}
           </RevealOnScroll>
