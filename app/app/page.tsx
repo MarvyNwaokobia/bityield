@@ -72,6 +72,11 @@ const FAQ = [
   { q: 'Why don’t I pay gas in STX?', a: 'BitYield sponsors every transaction. When you sign a deposit or withdrawal, our sponsor account pays the STX network fee for you — so you never need to hold STX.' },
   { q: 'How are the yield rates generated today?', a: 'Each strategy is currently a BitYield smart contract paying a fixed, transparent APY, labelled “Preview” in the app and fully verifiable on-chain. Live routing into the underlying protocols (Zest first) is our next milestone.' },
   { q: 'Can I withdraw at any time?', a: 'Yes. Positions are non-custodial and open-ended — trigger a withdrawal from your dashboard and your principal plus any accrued yield returns to your wallet.' },
+  { q: 'What is sBTC, and how do I get it?', a: 'sBTC is a 1:1 Bitcoin-backed asset on Stacks. You get it by sending BTC through the official sBTC bridge (sbtc.stacks.co) — BitYield links you straight there from the deposit screen.' },
+  { q: 'Which wallets are supported?', a: 'Any Stacks wallet works. We recommend Leather; Xverse is also supported. Connect in one tap — there is no separate BitYield account to create.' },
+  { q: 'Is BitYield audited?', a: 'The contracts are deployed on mainnet and fully public — you can read and verify every one on the explorer (see the Proof page). They are not yet independently audited, so deposit amounts you are comfortable testing with; a formal audit is planned before a wider rollout.' },
+  { q: 'Are there lock-ups, minimums, or hidden fees?', a: 'No lock-up and no enforced minimum — deposit and withdraw whenever you like. Gas is sponsored, so you pay no network fees, and there are no deposit or withdrawal charges.' },
+  { q: 'What happens to my funds if BitYield goes away?', a: 'Your position lives in an on-chain smart contract, keyed to your address — not on our servers. Even if the BitYield front end disappeared, only you can withdraw your position by calling the contract directly.' },
 ];
 
 // ─── Pieces ──────────────────────────────────────────────────────────────────
@@ -92,7 +97,7 @@ function LivePill() {
 function AppPreview() {
   return (
     <div className="relative motion-safe:animate-floaty">
-      <div aria-hidden className="absolute -inset-6 rounded-[2rem] bg-bitcoin/20 blur-3xl" />
+      <div aria-hidden className="absolute -inset-6 rounded-4xl bg-bitcoin/20 blur-3xl" />
       <div className="glass card-sheen relative rounded-3xl p-6 shadow-2xl shadow-black/60">
         <div className="flex items-center justify-between mb-6">
           <span className="text-zinc-400 text-xs uppercase tracking-widest">Portfolio</span>
@@ -267,8 +272,20 @@ export default function Home() {
           </RevealOnScroll>
           <RevealOnScroll stagger className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {HOW_STEPS.map(({ n, title, desc }) => (
-              <RevealItem key={n} className="relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-7">
-                <span className="font-display text-5xl font-bold text-bitcoin/25 leading-none tabular-nums">{n}</span>
+              <RevealItem
+                key={n}
+                className="group glow-card relative rounded-2xl border border-zinc-800 bg-zinc-900/40 p-7 transition-transform duration-200 ease-out hover:-translate-y-1.5 cursor-default"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="font-display text-5xl font-bold text-bitcoin/25 group-hover:text-bitcoin transition-colors duration-200 leading-none tabular-nums">
+                    {n}
+                  </span>
+                  <span className="text-bitcoin opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+                    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
+                    </svg>
+                  </span>
+                </div>
                 <p className="font-display text-xl font-semibold leading-snug mt-4">{title}</p>
                 <p className="text-zinc-500 text-sm leading-relaxed mt-2">{desc}</p>
               </RevealItem>
