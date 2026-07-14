@@ -6,17 +6,27 @@
 
 [![Built on Stacks](https://img.shields.io/badge/Built%20on-Stacks-orange)](https://stacks.co)
 [![Asset](https://img.shields.io/badge/Asset-sBTC-yellow)](https://stacks.co/sbtc)
-[![Network](https://img.shields.io/badge/Live%20on-Bitcoin%20Mainnet-brightgreen)](#deployment)
+[![Network](https://img.shields.io/badge/Deployed%20on-Bitcoin%20Mainnet-brightgreen)](#deployment)
+[![Stage](https://img.shields.io/badge/Stage-Controlled%20demo%20(v0.1)-blue)](#status)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
 ---
 
 ## Status
 
-**v0.1 is live on Bitcoin mainnet** (Stacks Endowment grant, Milestone 1).
-Connect a Leather wallet, deposit real sBTC, review the yield opportunity and
-risk disclosures, and confirm — with every transaction's STX fee sponsored so
-users never need to hold STX.
+**v0.1 is deployed on Bitcoin mainnet as a controlled demo** — not yet an open public launch. Connect a Leather wallet,
+deposit real sBTC, review the yield opportunity and risk disclosures, and
+confirm — with every transaction's STX fee sponsored so users never need to
+hold STX. The full flow is live and verifiable on-chain (see the demo
+transactions under [v0.1 — Stacks Endowment](#v01--stacks-endowment)).
+
+**What v0.1 delivers vs. what comes next:** v0.1 delivers the end-to-end
+**deposit flow** — wallet, balance, yield opportunity, risk review, sponsored
+confirmation, on-chain position. v0.2 delivers the **live yield source** —
+routing deposits into real protocol yield (starting with Zest) instead of the
+fixed, admin-set preview rate. The contracts are unaudited and owner-controlled
+by a single key today; a public launch is gated on the v0.2 audit and a
+multisig owner (see [Roadmap](#roadmap)).
 
 - `YieldRouter` (mainnet):
   [`SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router`](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet)
@@ -27,7 +37,7 @@ users never need to hold STX.
 - **Honest scope:** the yield strategies (Zest / Hermetica / Dual Stacking) are
   currently **BitYield's own strategy contracts**, each paying a fixed,
   admin-set APY. They *model* the target protocols but do not route to them
-  yet — live protocol integration (starting with **Zest**) is Milestone 2. The
+  yet — live protocol integration (starting with **Zest**) is v0.2. The
   app labels these "Preview" and links each strategy contract on the explorer
   so anyone can verify exactly what it does. See [Roadmap](#roadmap).
 
@@ -143,7 +153,7 @@ real Zest routing) is added with a single `add-strategy` admin call on the
 redeployed. **v0.1 ships four registered strategies** (`zest`, `hermetica`,
 `dual-stacking`, `mock-yield`); each is currently a self-contained contract
 paying a fixed, admin-set APY computed linearly from elapsed block height.
-Milestone 2 swaps the `zest` strategy's implementation for one that actually
+v0.2 swaps the `zest` strategy's implementation for one that actually
 supplies into Zest Protocol — no router change required.
 
 Core Clarity interface (as deployed):
@@ -188,17 +198,18 @@ Frontend pages:
 | Leather Wallet (leather.io)                 | Wallet + sBTC bridge link     | **Live** (SDK)         |
 | Hiro Systems (hiro.so)                      | Stacks.js, API, Clarinet      | **Live** (infra)       |
 | sBTC (stacks.co/sbtc)                       | 1:1 Bitcoin-backed deposit asset | **Live** (mainnet token) |
-| Zest Protocol (zestprotocol.com)            | Primary lending yield         | Roadmap — Milestone 2  |
+| Zest Protocol (zestprotocol.com)            | Primary lending yield         | Roadmap — v0.2         |
 | Hermetica (hermetica.fi)                    | Structured BTC yield          | Roadmap                |
 | Dual Stacking (stacks.co)                   | PoX yield                     | Roadmap                |
 | Circle USDCx / Bitflow                      | Stablecoin yield path         | Future track           |
 
 ---
 
-## Milestone 1 — Stacks Endowment grant
+## v0.1 — Stacks Endowment
 
-Milestone 1 delivers a **mainnet-ready deposit flow** from wallet connection
-through deposit confirmation. Mapping to the acceptance criteria:
+v0.1 delivers a **deposit flow live on Bitcoin mainnet** — from wallet
+connection through sponsored deposit confirmation — running as a controlled,
+team-funded demo. Mapping to the acceptance criteria:
 
 | Acceptance criterion | Where it lives |
 |----------------------|----------------|
@@ -285,7 +296,7 @@ automatically (`app/lib/stacks/network.ts`).
 
 ## Roadmap
 
-**Milestone 1 — mainnet-ready deposit flow (shipped)**
+**v0.1 — deposit flow live on mainnet (in review — demo video pending)**
 - [x] YieldRouter + pluggable strategy contracts deployed on **Bitcoin mainnet**
 - [x] Next.js frontend: deposit, withdraw, dashboard
 - [x] Leather Wallet integration, real on-chain sBTC balances
@@ -293,7 +304,7 @@ automatically (`app/lib/stacks/network.ts`).
 - [x] Deposit preview, confirmation, and risk/audit disclosures
 - [ ] Demo video of the full mainnet deposit flow
 
-**Milestone 2 — real protocol routing**
+**v0.2 — real protocol routing**
 - [ ] Route the `zest` strategy into live **Zest Protocol** lending (real BTC yield)
 - [ ] Read live APY/TVL from the protocol instead of a fixed rate
 - [ ] Independent audit of the routing contracts before public launch
@@ -334,7 +345,7 @@ everyone else.
 
 ## Contributing
 
-BitYield is an active grant project (Stacks Endowment). Issues and PRs for the
+BitYield is an active project (Stacks Endowment). Issues and PRs for the
 frontend, contracts, and docs are welcome. See `CONTRIBUTING.md`.
 
 ---
@@ -346,4 +357,4 @@ MIT
 ---
 
 *Built on Stacks — Bitcoin's leading L2*
-*Live on Bitcoin mainnet — Stacks Endowment grant, Milestone 1*
+*Deployed on Bitcoin mainnet (controlled demo) — Stacks Endowment, v0.1*
