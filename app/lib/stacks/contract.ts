@@ -1,4 +1,4 @@
-import { Cl, type TupleCV, type UIntCV } from '@stacks/transactions';
+import { uintCV, principalCV, type TupleCV, type UIntCV } from '@stacks/transactions';
 import { fetchCallReadOnlyFunction } from '@stacks/transactions';
 import { network, YIELD_ROUTER } from './network';
 import { CT, cvType } from './clarity-runtime';
@@ -79,7 +79,7 @@ export async function getPositions(address: string): Promise<Position[]> {
       contractAddress: YIELD_ROUTER.address,
       contractName: YIELD_ROUTER.name,
       functionName: 'get-all-position-ids',
-      functionArgs: [Cl.principal(address)],
+      functionArgs: [principalCV(address)],
       senderAddress: address,
       network,
     });
@@ -108,7 +108,7 @@ async function getPosition(address: string, id: number): Promise<RawPosition | n
       contractAddress: YIELD_ROUTER.address,
       contractName: YIELD_ROUTER.name,
       functionName: 'get-position',
-      functionArgs: [Cl.principal(address), Cl.uint(id)],
+      functionArgs: [principalCV(address), uintCV(id)],
       senderAddress: address,
       network,
     }),
@@ -116,7 +116,7 @@ async function getPosition(address: string, id: number): Promise<RawPosition | n
       contractAddress: YIELD_ROUTER.address,
       contractName: YIELD_ROUTER.name,
       functionName: 'get-position-value',
-      functionArgs: [Cl.principal(address), Cl.uint(id)],
+      functionArgs: [principalCV(address), uintCV(id)],
       senderAddress: address,
       network,
     }),
