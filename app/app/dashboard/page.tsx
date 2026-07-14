@@ -34,20 +34,28 @@ export default function DashboardPage() {
   const { address, isConnected } = useWallet();
 
   const [balanceSats, setBalanceSats] = useState<bigint | null>(null);
+  const [balanceError, setBalanceError] = useState(false);
   const [positions, setPositions] = useState<Position[] | null>(null);
   const [apyBps, setApyBps] = useState<number>(DEFAULT_APY_BPS);
   const [activity, setActivity] = useState<RouterTx[] | null>(null);
 
   const refresh = useCallback(async () => {
     if (!address) return;
-    const [balance, openPositions, userTxs] = await Promise.all([
-      getSbtcBalanceSats(address),
+    setBalanceError(false);
+    // Positions and history must render even if the balance read fails, so read
+    // the balance independently and treat a failure as an error (not zero).
+    const [openPositions, userTxs] = await Promise.all([
       getPositions(address),
       fetchUserActivity(address).catch(() => [] as RouterTx[]),
     ]);
-    setBalanceSats(balance);
     setPositions(openPositions);
     setActivity(userTxs);
+    try {
+      setBalanceSats(await getSbtcBalanceSats(address));
+    } catch {
+      setBalanceSats(null);
+      setBalanceError(true);
+    }
   }, [address]);
 
   useEffect(() => {
@@ -67,7 +75,7 @@ export default function DashboardPage() {
   );
   const accruedYieldSats = (positions ?? []).reduce((sum, p) => sum + p.accruedYieldSats, 0n);
   const totalSats = (balanceSats ?? 0n) + earningSats;
-  const loading = balanceSats === null || positions === null;
+  const loading = (balanceSats === null && !balanceError) || positions === null;
 
   return (
     <div className="bg-[#0a0a0a] text-white min-h-screen flex flex-col">
@@ -114,10 +122,20 @@ export default function DashboardPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-zinc-500 text-sm">Available</p>
-                    <p className="text-lg font-mono">
-                      <AnimatedNumber value={satsToBtc(balanceSats ?? 0n)} formatter={(n) => n.toFixed(8)} />{' '}
-                      BTC
-                    </p>
+                    {balanceError ? (
+                      <button
+                        onClick={refresh}
+                        className="text-lg font-mono text-amber-400 hover:underline cursor-pointer"
+                        title="We couldn't load your balance — your sBTC is safe. Tap to retry."
+                      >
+                        — · Retry
+                      </button>
+                    ) : (
+                      <p className="text-lg font-mono">
+                        <AnimatedNumber value={satsToBtc(balanceSats ?? 0n)} formatter={(n) => n.toFixed(8)} />{' '}
+                        BTC
+                      </p>
+                    )}
                   </div>
                   <div>
                     <p className="text-zinc-500 text-sm">Earning</p>

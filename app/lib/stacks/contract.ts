@@ -1,6 +1,7 @@
-import { ClarityType, Cl, type TupleCV, type UIntCV } from '@stacks/transactions';
+import { Cl, type TupleCV, type UIntCV } from '@stacks/transactions';
 import { fetchCallReadOnlyFunction } from '@stacks/transactions';
 import { network, YIELD_ROUTER } from './network';
+import { CT, cvType } from './clarity-runtime';
 
 export const DEFAULT_APY_BPS = 500; // 5.00% — matches the contract's default and the landing page.
 
@@ -34,17 +35,21 @@ export async function getBestRate(): Promise<RateInfo> {
       network,
     });
 
-    if (result.type === ClarityType.Tuple) {
+    if (cvType(result) === CT.tuple) {
       const value = (result as TupleCV).value;
       const strategy = value.strategy;
       const apyBps = value['apy-bps'];
       const tvl = value.tvl;
       if (
-        strategy?.type === ClarityType.StringASCII &&
-        apyBps?.type === ClarityType.UInt &&
-        tvl?.type === ClarityType.UInt
+        cvType(strategy) === CT.ascii &&
+        cvType(apyBps) === CT.uint &&
+        cvType(tvl) === CT.uint
       ) {
-        return { strategy: strategy.value, apyBps: Number(asUint(apyBps)), tvlSats: asUint(tvl) };
+        return {
+          strategy: (strategy as { value: string }).value,
+          apyBps: Number(asUint(apyBps as UIntCV)),
+          tvlSats: asUint(tvl as UIntCV),
+        };
       }
     }
   } catch {
@@ -79,9 +84,9 @@ export async function getPositions(address: string): Promise<Position[]> {
       network,
     });
 
-    if (idsResult.type !== ClarityType.List) return [];
-    const ids = idsResult.value
-      .filter((v): v is UIntCV => v.type === ClarityType.UInt)
+    if (cvType(idsResult) !== CT.list) return [];
+    const ids = (idsResult as { value: unknown[] }).value
+      .filter((v): v is UIntCV => cvType(v) === CT.uint)
       .map((v) => Number(asUint(v)));
 
     const positions = await Promise.all(ids.map((id) => getPosition(address, id)));
@@ -117,12 +122,12 @@ async function getPosition(address: string, id: number): Promise<RawPosition | n
     }),
   ]);
 
-  if (positionResult.type !== ClarityType.OptionalSome || valueResult.type !== ClarityType.OptionalSome) {
+  if (cvType(positionResult) !== CT.some || cvType(valueResult) !== CT.some) {
     return null;
   }
 
-  const position = (positionResult.value as TupleCV).value;
-  const value = (valueResult.value as TupleCV).value;
+  const position = ((positionResult as { value: TupleCV }).value).value;
+  const value = ((valueResult as { value: TupleCV }).value).value;
 
   const strategy = position.strategy;
   const apyBps = position['apy-bps'];
@@ -131,21 +136,21 @@ async function getPosition(address: string, id: number): Promise<RawPosition | n
   const closed = value.closed;
 
   if (
-    strategy?.type !== ClarityType.StringASCII ||
-    apyBps?.type !== ClarityType.UInt ||
-    amount?.type !== ClarityType.UInt ||
-    accruedYield?.type !== ClarityType.UInt ||
-    (closed?.type !== ClarityType.BoolTrue && closed?.type !== ClarityType.BoolFalse)
+    cvType(strategy) !== CT.ascii ||
+    cvType(apyBps) !== CT.uint ||
+    cvType(amount) !== CT.uint ||
+    cvType(accruedYield) !== CT.uint ||
+    (cvType(closed) !== CT.true && cvType(closed) !== CT.false)
   ) {
     return null;
   }
 
   return {
     id,
-    amountSats: asUint(amount),
-    accruedYieldSats: asUint(accruedYield),
-    apyBps: Number(asUint(apyBps)),
-    strategy: strategy.value,
-    closed: closed.type === ClarityType.BoolTrue,
+    amountSats: asUint(amount as UIntCV),
+    accruedYieldSats: asUint(accruedYield as UIntCV),
+    apyBps: Number(asUint(apyBps as UIntCV)),
+    strategy: (strategy as { value: string }).value,
+    closed: cvType(closed) === CT.true,
   };
 }

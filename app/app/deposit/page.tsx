@@ -40,6 +40,7 @@ export default function DepositPage() {
 
   const [step, setStep] = useState<Step>('amount');
   const [balanceSats, setBalanceSats] = useState<bigint | null>(null);
+  const [balanceError, setBalanceError] = useState(false);
   const [amount, setAmount] = useState('0');
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyName>('zest');
   const [phase, setPhase] = useState<TxPhase>('signing');
@@ -48,12 +49,15 @@ export default function DepositPage() {
 
   const refreshBalance = useCallback(async () => {
     if (!address) return;
-    const sats = await getSbtcBalanceSats(address);
-    setBalanceSats(sats);
-    if (sats > 0n) {
-      setAmount(satsToBtc(sats).toFixed(8));
-    } else {
-      setAmount('0');
+    setBalanceError(false);
+    try {
+      const sats = await getSbtcBalanceSats(address);
+      setBalanceSats(sats);
+      setAmount(sats > 0n ? satsToBtc(sats).toFixed(8) : '0');
+    } catch {
+      // A failed read must never look like an empty wallet — surface a retry.
+      setBalanceSats(null);
+      setBalanceError(true);
     }
   }, [address]);
 
@@ -119,7 +123,7 @@ export default function DepositPage() {
               </motion.div>
             )}
 
-            {isConnected && step === 'amount' && balanceSats === null && (
+            {isConnected && step === 'amount' && balanceSats === null && !balanceError && (
               <motion.div
                 key="loading"
                 initial="initial"
@@ -132,6 +136,30 @@ export default function DepositPage() {
                   <div className="w-10 h-10 border-4 border-zinc-700 border-t-bitcoin rounded-full animate-spin" />
                 </div>
                 <p className="text-zinc-400">Loading your balance…</p>
+              </motion.div>
+            )}
+
+            {isConnected && step === 'amount' && balanceError && (
+              <motion.div
+                key="balance-error"
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                variants={fadeSlideUp}
+                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center space-y-4"
+              >
+                <div className="text-amber-400 w-fit p-3 rounded-full bg-amber-500/10 mx-auto">
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+                  </svg>
+                </div>
+                <p className="text-zinc-400 text-sm leading-relaxed">
+                  We couldn&apos;t load your balance just now — this is a network hiccup, not a
+                  problem with your wallet. Your sBTC is safe.
+                </p>
+                <PrimaryButton onClick={refreshBalance} className="px-6 py-2.5 text-sm">
+                  Retry
+                </PrimaryButton>
               </motion.div>
             )}
 

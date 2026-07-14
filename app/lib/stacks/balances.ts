@@ -1,35 +1,39 @@
-import { ClarityType, Cl, fetchCallReadOnlyFunction } from '@stacks/transactions';
+import { Cl, fetchCallReadOnlyFunction, type UIntCV } from '@stacks/transactions';
 import { network, SBTC_TOKEN } from './network';
+import { CT, cvType } from './clarity-runtime';
 
 /**
  * Reads the user's sBTC balance in sats via the token contract's SIP-010
- * `get-balance`. Returns 0n if the token contract isn't configured yet
- * (NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS unset) or the read fails.
+ * `get-balance`. Returns 0n if the token contract isn't configured
+ * (NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS unset).
  *
- * This is the real on-chain balance only — no simulated/local balances are
- * ever mixed in, so what the UI shows always matches what a deposit can
- * actually move.
+ * Throws if the on-chain read fails or returns an unexpected shape, so callers
+ * can distinguish "the wallet genuinely holds 0" from "we couldn't read the
+ * balance" — the UI must never claim the user has no sBTC on a failed read.
+ *
+ * The comparison uses string wire-types via {@link cvType} rather than the
+ * `ClarityType` enum object, which is tree-shaken out of production bundles —
+ * see clarity-runtime.ts.
  */
 export async function getSbtcBalanceSats(address: string): Promise<bigint> {
   if (!SBTC_TOKEN) return 0n;
 
-  try {
-    const result = await fetchCallReadOnlyFunction({
-      contractAddress: SBTC_TOKEN.address,
-      contractName: SBTC_TOKEN.name,
-      functionName: 'get-balance',
-      functionArgs: [Cl.principal(address)],
-      senderAddress: address,
-      network,
-    });
+  const result = await fetchCallReadOnlyFunction({
+    contractAddress: SBTC_TOKEN.address,
+    contractName: SBTC_TOKEN.name,
+    functionName: 'get-balance',
+    functionArgs: [Cl.principal(address)],
+    senderAddress: address,
+    network,
+  });
 
-    if (result.type === ClarityType.ResponseOk && result.value.type === ClarityType.UInt) {
-      return BigInt(result.value.value);
+  // get-balance returns (response uint uint); unwrap the ok branch.
+  if (cvType(result) === CT.ok) {
+    const inner = (result as { value: unknown }).value;
+    if (cvType(inner) === CT.uint) {
+      return BigInt((inner as UIntCV).value);
     }
-  } catch {
-    // Token contract not deployed/reachable yet — report zero rather than
-    // guessing, so the UI never shows sBTC the user doesn't actually hold.
   }
 
-  return 0n;
+  throw new Error(`Unexpected get-balance response: ${cvType(result)}`);
 }
