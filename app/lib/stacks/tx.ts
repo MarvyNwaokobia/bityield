@@ -1,5 +1,8 @@
 import { JsonRpcErrorCode, request } from '@stacks/connect';
-import { Cl, type ClarityValue } from '@stacks/transactions';
+// Import the CV factory functions directly rather than via the `Cl` namespace
+// object: production tree-shaking strips the namespace's methods (`Cl.uint is
+// not a function`), but directly-referenced named exports survive.
+import { uintCV, stringAsciiCV, principalCV, type ClarityValue } from '@stacks/transactions';
 import { HIRO_API_URL, NETWORK_NAME, SBTC_TOKEN, YIELD_ROUTER, STRATEGIES, type StrategyName, toContractId } from './network';
 
 export type TxOutcome =
@@ -120,10 +123,10 @@ export async function submitDepositTx(
   return submitSponsoredContractCall(
     'deposit',
     [
-      Cl.uint(amountSats),
-      Cl.stringAscii(strategyName),
-      Cl.principal(toContractId(strategy)),
-      Cl.principal(toContractId(SBTC_TOKEN)),
+      uintCV(amountSats),
+      stringAsciiCV(strategyName),
+      principalCV(toContractId(strategy)),
+      principalCV(toContractId(SBTC_TOKEN)),
     ],
     options
   );
@@ -145,9 +148,9 @@ export async function submitWithdrawTx(
   return submitSponsoredContractCall(
     'withdraw',
     [
-      Cl.uint(positionId),
-      Cl.principal(toContractId(strategy)),
-      Cl.principal(toContractId(SBTC_TOKEN)),
+      uintCV(positionId),
+      principalCV(toContractId(strategy)),
+      principalCV(toContractId(SBTC_TOKEN)),
     ],
     options
   );
