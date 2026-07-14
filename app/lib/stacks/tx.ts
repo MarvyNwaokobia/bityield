@@ -15,11 +15,16 @@ export type TxPhase = 'signing' | 'sponsoring' | 'confirming';
 
 interface SubmitOptions {
   onPhase?: (phase: TxPhase) => void;
+  // Fires as soon as the transaction is broadcast and has a txid, so the UI can
+  // show a live explorer link while it confirms.
+  onTxId?: (txid: string) => void;
   timeoutMs?: number;
 }
 
-const DEFAULT_TIMEOUT_MS = 60_000;
-const POLL_INTERVAL_MS = 3_000;
+// Nakamoto blocks land roughly every 10–25s; with mempool + API indexing a
+// confirmation is usually visible in 30–60s. Give it 90s before timing out.
+const DEFAULT_TIMEOUT_MS = 90_000;
+const POLL_INTERVAL_MS = 2_500;
 
 async function sponsorAndBroadcast(serializedTx: string): Promise<string> {
   const res = await fetch('/api/sponsor-tx', {
@@ -39,7 +44,9 @@ async function pollTxStatus(txid: string, timeoutMs: number): Promise<TxOutcome>
 
   while (Date.now() < deadline) {
     try {
-      const res = await fetch(`${HIRO_API_URL}/extended/v1/tx/${txid}`);
+      // `unanchored=true` surfaces microblock/unanchored inclusion sooner, so we
+      // detect success a bit faster than waiting for the fully anchored block.
+      const res = await fetch(`${HIRO_API_URL}/extended/v1/tx/${txid}?unanchored=true`);
       if (res.ok) {
         const data: { tx_status?: string } = await res.json();
         if (data.tx_status === 'success') return { status: 'success', txid };
@@ -65,7 +72,7 @@ async function pollTxStatus(txid: string, timeoutMs: number): Promise<TxOutcome>
 async function submitSponsoredContractCall(
   functionName: 'deposit' | 'withdraw',
   functionArgs: ClarityValue[],
-  { onPhase, timeoutMs = DEFAULT_TIMEOUT_MS }: SubmitOptions
+  { onPhase, onTxId, timeoutMs = DEFAULT_TIMEOUT_MS }: SubmitOptions
 ): Promise<TxOutcome> {
   if (!YIELD_ROUTER) {
     throw new Error('YieldRouter contract is not configured (NEXT_PUBLIC_YIELD_ROUTER_ADDRESS).');
@@ -94,6 +101,7 @@ async function submitSponsoredContractCall(
 
   if (!result.transaction) {
     if (result.txid) {
+      onTxId?.(result.txid);
       onPhase?.('confirming');
       return pollTxStatus(result.txid, timeoutMs);
     }
@@ -103,6 +111,7 @@ async function submitSponsoredContractCall(
   onPhase?.('sponsoring');
   const txid = await sponsorAndBroadcast(result.transaction);
 
+  onTxId?.(txid);
   onPhase?.('confirming');
   return pollTxStatus(txid, timeoutMs);
 }

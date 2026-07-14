@@ -87,6 +87,13 @@ export function explorerContractUrl(contractId: string): string {
   return `https://explorer.hiro.so/txid/${contractId}?chain=${chain}`;
 }
 
+// Hiro explorer link for a transaction id, so users can watch their own
+// deposit/withdraw confirm on-chain in real time.
+export function explorerTxUrl(txid: string): string {
+  const chain = NETWORK_NAME === "mainnet" ? "mainnet" : "testnet";
+  return `https://explorer.hiro.so/txid/${txid}?chain=${chain}`;
+}
+
 // Resolves a strategy name to the deployed contract id, or null if unset.
 export function strategyContractId(name: StrategyName): string | null {
   const ref = STRATEGIES[name];

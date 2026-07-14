@@ -13,7 +13,7 @@ import { ConnectPrompt } from '../components/ConnectPrompt';
 import { ErrorCard, PendingCard, SuccessCard } from '../components/TransactionStatus';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { PrimaryButton, SecondaryButton } from '../components/Button';
-import { StrategyName, SBTC_ACQUIRE_URL, NETWORK_NAME, explorerContractUrl, strategyContractId, YIELD_ROUTER, toContractId } from '@/lib/stacks/network';
+import { StrategyName, SBTC_ACQUIRE_URL, NETWORK_NAME, explorerContractUrl, explorerTxUrl, strategyContractId, YIELD_ROUTER, toContractId } from '@/lib/stacks/network';
 
 type Step = 'amount' | 'confirm' | 'pending' | 'success' | 'error';
 
@@ -44,6 +44,7 @@ export default function DepositPage() {
   const [amount, setAmount] = useState('0');
   const [selectedStrategy, setSelectedStrategy] = useState<StrategyName>('zest');
   const [phase, setPhase] = useState<TxPhase>('signing');
+  const [txid, setTxid] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [depositedSats, setDepositedSats] = useState(0);
 
@@ -80,8 +81,9 @@ export default function DepositPage() {
     setStep('pending');
     setErrorMessage(null);
     setPhase('signing');
+    setTxid(null);
     try {
-      const outcome = await submitDepositTx(amountSats, selectedStrategy, { onPhase: setPhase });
+      const outcome = await submitDepositTx(amountSats, selectedStrategy, { onPhase: setPhase, onTxId: setTxid });
       if (outcome.status === 'success') {
         setDepositedSats(amountSats);
         await refreshBalance();
@@ -449,6 +451,7 @@ export default function DepositPage() {
               <motion.div key="pending" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
                 <PendingCard
                   phase={phase}
+                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
                   footer={`${numericAmount.toFixed(8)} BTC → earning ${apy}% APY on ${selectedStrategyOption.name}`}
                 />
               </motion.div>

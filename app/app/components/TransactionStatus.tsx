@@ -17,7 +17,7 @@ export const PHASE_COPY: Record<TxPhase, { title: string; subtitle: string }> = 
   },
   confirming: {
     title: 'Confirming on the network',
-    subtitle: 'This usually takes about a minute.',
+    subtitle: 'Your transaction is live — waiting for on-chain finality, usually 30–60 seconds.',
   },
 };
 
@@ -69,7 +69,15 @@ function StepCircle({ status }: { status: 'done' | 'active' | 'upcoming' }) {
   return <div className="w-8 h-8 rounded-full border-2 border-zinc-700" />;
 }
 
-export function PendingCard({ phase, footer }: { phase: TxPhase; footer?: ReactNode }) {
+export function PendingCard({
+  phase,
+  footer,
+  explorerUrl,
+}: {
+  phase: TxPhase;
+  footer?: ReactNode;
+  explorerUrl?: string;
+}) {
   const { title, subtitle } = PHASE_COPY[phase];
   const currentIndex = PHASE_ORDER.indexOf(phase);
 
@@ -104,6 +112,17 @@ export function PendingCard({ phase, footer }: { phase: TxPhase; footer?: ReactN
 
       <p className="font-display text-xl font-semibold mb-2">{title}</p>
       <p className="text-zinc-400">{subtitle}</p>
+
+      {phase === 'confirming' && explorerUrl && (
+        <a
+          href={explorerUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block mt-4 text-sm text-bitcoin/90 hover:text-bitcoin hover:underline"
+        >
+          Watch it confirm on the explorer ↗
+        </a>
+      )}
 
       {footer && <p className="text-zinc-600 text-sm mt-6">{footer}</p>}
     </div>

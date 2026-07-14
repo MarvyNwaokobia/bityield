@@ -8,7 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
 import { getPositions, type Position } from '@/lib/stacks/contract';
 import { submitWithdrawTx, type TxPhase } from '@/lib/stacks/tx';
-import { type StrategyName } from '@/lib/stacks/network';
+import { type StrategyName, explorerTxUrl } from '@/lib/stacks/network';
 import { formatBtc, satsToBtc } from '@/lib/stacks/format';
 import { fadeSlideUp, hoverScale, springTransition, staggerContainer } from '@/lib/motion';
 import { ConnectPrompt } from '../components/ConnectPrompt';
@@ -27,6 +27,7 @@ function WithdrawPageInner() {
   const [positions, setPositions] = useState<Position[] | null>(null);
   const [selected, setSelected] = useState<Position | null>(null);
   const [phase, setPhase] = useState<TxPhase>('signing');
+  const [txid, setTxid] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [withdrawnTotalSats, setWithdrawnTotalSats] = useState(0n);
 
@@ -55,8 +56,9 @@ function WithdrawPageInner() {
     setStep('pending');
     setErrorMessage(null);
     setPhase('signing');
+    setTxid(null);
     try {
-      const outcome = await submitWithdrawTx(selected.id, selected.strategy as StrategyName, { onPhase: setPhase });
+      const outcome = await submitWithdrawTx(selected.id, selected.strategy as StrategyName, { onPhase: setPhase, onTxId: setTxid });
       if (outcome.status === 'success') {
         setWithdrawnTotalSats(selected.amountSats + selected.accruedYieldSats);
         await refreshPositions();
@@ -264,7 +266,7 @@ function WithdrawPageInner() {
 
             {step === 'pending' && (
               <motion.div key="pending" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <PendingCard phase={phase} footer={`Withdrawing ${formatBtc(totalSats)} BTC`} />
+                <PendingCard phase={phase} explorerUrl={txid ? explorerTxUrl(txid) : undefined} footer={`Withdrawing ${formatBtc(totalSats)} BTC`} />
               </motion.div>
             )}
 
