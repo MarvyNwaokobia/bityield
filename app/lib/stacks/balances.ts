@@ -1,39 +1,43 @@
-import { Cl, fetchCallReadOnlyFunction, type UIntCV } from '@stacks/transactions';
-import { network, SBTC_TOKEN } from './network';
-import { CT, cvType } from './clarity-runtime';
+import { HIRO_API_URL, SBTC_TOKEN } from './network';
 
 /**
- * Reads the user's sBTC balance in sats via the token contract's SIP-010
- * `get-balance`. Returns 0n if the token contract isn't configured
- * (NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS unset).
+ * Reads the user's sBTC balance in sats.
  *
- * Throws if the on-chain read fails or returns an unexpected shape, so callers
- * can distinguish "the wallet genuinely holds 0" from "we couldn't read the
- * balance" — the UI must never claim the user has no sBTC on a failed read.
+ * Uses the Hiro Extended REST API (`/extended/v1/address/{addr}/balances`),
+ * which returns balances as plain JSON — no Clarity deserialization and no
+ * dependency on `@stacks/transactions` at runtime. An earlier version called
+ * the token contract's SIP-010 `get-balance` via `fetchCallReadOnlyFunction`,
+ * but the `ClarityType` enum that path relies on gets tree-shaken out of the
+ * production bundle, so the read silently returned 0. This endpoint sidesteps
+ * that entirely (it's the same one the sponsor-health check and tx history use).
  *
- * The comparison uses string wire-types via {@link cvType} rather than the
- * `ClarityType` enum object, which is tree-shaken out of production bundles —
- * see clarity-runtime.ts.
+ * Returns 0n when the token contract isn't configured, or when the wallet
+ * genuinely holds no sBTC. Throws only when the read itself fails (network /
+ * non-2xx), so callers can tell "empty wallet" apart from "couldn't load" and
+ * never falsely claim the user has no sBTC.
  */
 export async function getSbtcBalanceSats(address: string): Promise<bigint> {
   if (!SBTC_TOKEN) return 0n;
 
-  const result = await fetchCallReadOnlyFunction({
-    contractAddress: SBTC_TOKEN.address,
-    contractName: SBTC_TOKEN.name,
-    functionName: 'get-balance',
-    functionArgs: [Cl.principal(address)],
-    senderAddress: address,
-    network,
+  const res = await fetch(`${HIRO_API_URL}/extended/v1/address/${address}/balances`, {
+    cache: 'no-store',
   });
+  if (!res.ok) {
+    throw new Error(`Balance read failed: ${res.status} ${res.statusText}`);
+  }
 
-  // get-balance returns (response uint uint); unwrap the ok branch.
-  if (cvType(result) === CT.ok) {
-    const inner = (result as { value: unknown }).value;
-    if (cvType(inner) === CT.uint) {
-      return BigInt((inner as UIntCV).value);
+  const data: { fungible_tokens?: Record<string, { balance?: string }> } = await res.json();
+  const tokens = data.fungible_tokens ?? {};
+
+  // Balances are keyed by `<contract-address>.<contract-name>::<asset-name>`.
+  // Match on the contract id prefix so we don't depend on the asset name.
+  const prefix = `${SBTC_TOKEN.address}.${SBTC_TOKEN.name}::`;
+  for (const [assetId, info] of Object.entries(tokens)) {
+    if (assetId.startsWith(prefix)) {
+      return BigInt(info.balance ?? '0');
     }
   }
 
-  throw new Error(`Unexpected get-balance response: ${cvType(result)}`);
+  // Token not present in the wallet's ledger — a genuine zero balance.
+  return 0n;
 }
