@@ -212,7 +212,7 @@ export default function Home() {
           <Link href="/proof" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Proof</Link>
           <Link href="/dashboard" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Dashboard</Link>
           <ConnectWalletButton />
-          <PrimaryLinkButton href="/deposit" className="px-5 py-2 text-sm">Launch App</PrimaryLinkButton>
+          <PrimaryLinkButton href="/dashboard" className="px-5 py-2 text-sm">Launch App</PrimaryLinkButton>
         </div>
       </nav>
 
@@ -244,7 +244,7 @@ export default function Home() {
               ))}
             </motion.ul>
             <motion.div variants={fadeSlideUp} className="mt-9 flex flex-col sm:flex-row items-center lg:items-start justify-center lg:justify-start gap-4">
-              <PrimaryLinkButton href="/deposit" className="px-9 py-4 text-base w-full sm:w-auto">Launch App</PrimaryLinkButton>
+              <PrimaryLinkButton href="/dashboard" className="px-9 py-4 text-base w-full sm:w-auto">Launch App</PrimaryLinkButton>
               <Link href="/proof" className="text-base font-semibold text-zinc-300 hover:text-white transition-colors px-4 py-4">
                 See the on-chain proof →
               </Link>
@@ -389,7 +389,7 @@ export default function Home() {
               Live on Bitcoin mainnet. Connect, deposit sBTC, and start earning — with zero gas to pay.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <PrimaryLinkButton href="/deposit" className="px-9 py-4 text-base w-full sm:w-auto">Launch App</PrimaryLinkButton>
+              <PrimaryLinkButton href="/dashboard" className="px-9 py-4 text-base w-full sm:w-auto">Launch App</PrimaryLinkButton>
               <Link href="/proof" className="text-base font-semibold text-white/90 hover:text-white transition-colors px-4 py-4">
                 Verify on-chain →
               </Link>
@@ -404,7 +404,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
           <Logo />
           <div className="flex items-center gap-6 text-zinc-500">
-            <Link href="/deposit" className="hover:text-white transition-colors">App</Link>
+            <Link href="/dashboard" className="hover:text-white transition-colors">App</Link>
             <Link href="/proof" className="hover:text-white transition-colors">Proof</Link>
             <span>Built on Stacks · Secured by Bitcoin</span>
           </div>
