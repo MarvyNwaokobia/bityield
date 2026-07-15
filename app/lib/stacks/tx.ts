@@ -44,9 +44,10 @@ async function pollTxStatus(txid: string, timeoutMs: number): Promise<TxOutcome>
 
   while (Date.now() < deadline) {
     try {
-      // `unanchored=true` surfaces microblock/unanchored inclusion sooner, so we
-      // detect success a bit faster than waiting for the fully anchored block.
-      const res = await fetch(`${HIRO_API_URL}/extended/v1/tx/${txid}?unanchored=true`);
+      // Poll the canonical (anchored) status so we only report success once the
+      // transaction is genuinely confirmed — i.e. the app's "done" matches what
+      // the explorer shows, and we never claim "earning" before it's final.
+      const res = await fetch(`${HIRO_API_URL}/extended/v1/tx/${txid}`);
       if (res.ok) {
         const data: { tx_status?: string } = await res.json();
         if (data.tx_status === 'success') return { status: 'success', txid };

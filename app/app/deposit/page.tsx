@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
 import { getSbtcBalanceSats } from '@/lib/stacks/balances';
@@ -37,6 +38,7 @@ const STRATEGY_OPTIONS: StrategyOption[] = [
 
 export default function DepositPage() {
   const { address, isConnected } = useWallet();
+  const router = useRouter();
 
   const [step, setStep] = useState<Step>('amount');
   const [balanceSats, setBalanceSats] = useState<bigint | null>(null);
@@ -462,7 +464,8 @@ export default function DepositPage() {
                 <SuccessCard
                   title="You're now earning"
                   description={`${apy}% APY on ${satsToBtc(BigInt(depositedSats)).toFixed(8)} BTC with ${selectedStrategyOption.name}, paid in Bitcoin.`}
-                  onDone={() => setStep('amount')}
+                  onDone={() => router.push('/dashboard')}
+                  doneLabel="View dashboard"
                 >
                   <div className="bg-black border border-zinc-800 rounded-xl p-6 mb-8 text-center sm:text-left">
                     <p className="text-zinc-500 text-sm uppercase tracking-widest mb-2">

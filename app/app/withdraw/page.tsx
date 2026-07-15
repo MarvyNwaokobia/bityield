@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { Logo } from '../components/Logo';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
@@ -20,6 +20,7 @@ type Step = 'select' | 'confirm' | 'pending' | 'success' | 'error';
 
 function WithdrawPageInner() {
   const { address, isConnected } = useWallet();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const preselectId = searchParams.get('position');
 
@@ -275,10 +276,8 @@ function WithdrawPageInner() {
                 <SuccessCard
                   title="Withdrawal complete"
                   description={`${formatBtc(withdrawnTotalSats)} BTC has been sent back to your wallet on Bitcoin L1.`}
-                  onDone={() => {
-                    setSelected(null);
-                    setStep('select');
-                  }}
+                  onDone={() => router.push('/dashboard')}
+                  doneLabel="View dashboard"
                 >
                   <div className="bg-black border border-zinc-800 rounded-xl p-6 mb-8">
                     <p className="text-zinc-500 text-sm">
