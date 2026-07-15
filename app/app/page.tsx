@@ -208,11 +208,13 @@ export default function Home() {
       {/* Nav */}
       <nav className="fixed top-0 inset-x-0 z-50 px-6 py-4 flex items-center justify-between border-b border-zinc-800/50 bg-[#0a0a0a]/80 backdrop-blur-md">
         <Logo />
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
           <Link href="/proof" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Proof</Link>
           <Link href="/dashboard" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Dashboard</Link>
           <ConnectWalletButton />
-          <PrimaryLinkButton href="/dashboard" className="px-5 py-2 text-sm">Launch App</PrimaryLinkButton>
+          <span className="hidden sm:inline-flex">
+            <PrimaryLinkButton href="/dashboard" className="px-5 py-2 text-sm">Launch App</PrimaryLinkButton>
+          </span>
         </div>
       </nav>
 
