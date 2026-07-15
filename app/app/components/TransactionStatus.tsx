@@ -13,11 +13,11 @@ export const PHASE_COPY: Record<TxPhase, { title: string; subtitle: string }> = 
   },
   sponsoring: {
     title: 'Submitting your transaction',
-    subtitle: 'Covering the network fee and broadcasting — this is automatic.',
+    subtitle: 'Covering the network fee and broadcasting. This is automatic.',
   },
   confirming: {
     title: 'Confirming on the network',
-    subtitle: 'Your transaction is live — waiting for on-chain finality, usually 30–60 seconds.',
+    subtitle: 'Your transaction is live, waiting for on-chain finality, usually 30 to 60 seconds.',
   },
 };
 

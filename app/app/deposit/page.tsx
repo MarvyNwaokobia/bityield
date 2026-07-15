@@ -29,11 +29,11 @@ interface StrategyOption {
 
 // Honest descriptions: these are BitYield's own strategy contracts today, each
 // paying a fixed APY. They model the target protocols but do not route to them
-// yet — live integration is v0.2. See the Risk & disclosures panel on confirm.
+// yet. Live integration is v0.2. See the Risk & disclosures panel on confirm.
 const STRATEGY_OPTIONS: StrategyOption[] = [
-  { id: 'zest', name: 'Zest Lending', apy: 4.5, targetProtocol: 'Zest Protocol', risk: 'Low', desc: 'Models Zest lending yield. Today a BitYield strategy contract paying a fixed 4.5% APY — live Zest routing ships in v0.2.' },
-  { id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY — live routing ships in v0.2.' },
-  { id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', desc: 'Models Dual Stacking PoX yield. Today a BitYield strategy contract paying a fixed 8.5% APY — live routing ships in v0.2.' }
+  { id: 'zest', name: 'Zest Lending', apy: 4.5, targetProtocol: 'Zest Protocol', risk: 'Low', desc: 'Models Zest lending yield. Today a BitYield strategy contract paying a fixed 4.5% APY. Live Zest routing ships in v0.2.' },
+  { id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY. Live routing ships in v0.2.' },
+  { id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', desc: 'Models Dual Stacking PoX yield. Today a BitYield strategy contract paying a fixed 8.5% APY. Live routing ships in v0.2.' }
 ];
 
 export default function DepositPage() {
@@ -58,7 +58,7 @@ export default function DepositPage() {
       setBalanceSats(sats);
       setAmount(sats > 0n ? satsToBtc(sats).toFixed(8) : '0');
     } catch {
-      // A failed read must never look like an empty wallet — surface a retry.
+      // A failed read must never look like an empty wallet, so surface a retry.
       setBalanceSats(null);
       setBalanceError(true);
     }
@@ -94,7 +94,7 @@ export default function DepositPage() {
         setStep('confirm');
       } else if (outcome.status === 'timeout') {
         setErrorMessage(
-          'This is taking longer than expected. Your transaction may still confirm — check your dashboard in a few minutes.'
+          'This is taking longer than expected. Your transaction may still confirm. Check your dashboard in a few minutes.'
         );
         setStep('error');
       } else {
@@ -158,7 +158,7 @@ export default function DepositPage() {
                   </svg>
                 </div>
                 <p className="text-zinc-400 text-sm leading-relaxed">
-                  We couldn&apos;t load your balance just now — this is a network hiccup, not a
+                  We couldn&apos;t load your balance just now. This is a network hiccup, not a
                   problem with your wallet. Your sBTC is safe.
                 </p>
                 <PrimaryButton onClick={refreshBalance} className="px-6 py-2.5 text-sm">
@@ -203,8 +203,8 @@ export default function DepositPage() {
                       </svg>
                     </div>
                     <p className="text-zinc-400 text-sm leading-relaxed">
-                      You don&apos;t have any sBTC in this wallet yet. sBTC is 1:1 Bitcoin-backed —
-                      get some via the {NETWORK_NAME === 'mainnet' ? 'official sBTC bridge' : 'Hiro testnet faucet'},
+                      You don&apos;t have any sBTC in this wallet yet. sBTC is 1:1 Bitcoin-backed.
+                      Get some via the {NETWORK_NAME === 'mainnet' ? 'official sBTC bridge' : 'Hiro testnet faucet'},
                       then come back and refresh.
                     </p>
                     <a
@@ -221,7 +221,7 @@ export default function DepositPage() {
                       onClick={refreshBalance}
                       className="text-zinc-400 hover:text-white text-sm cursor-pointer transition-colors"
                     >
-                      I&apos;ve got sBTC — refresh balance
+                      I&apos;ve got sBTC, refresh balance
                     </button>
                   </div>
                 ) : (
@@ -387,7 +387,7 @@ export default function DepositPage() {
                   </div>
                 </div>
 
-                {/* Risk & disclosures — honest statement of what this deposit does today */}
+                {/* Risk & disclosures: honest statement of what this deposit does today */}
                 <div className="bg-zinc-950 border border-amber-500/20 rounded-xl p-4 mb-8 space-y-3">
                   <p className="font-semibold text-white text-sm flex items-center gap-1.5">
                     <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -399,7 +399,7 @@ export default function DepositPage() {
                     <li>
                       <span className="text-zinc-300 font-medium">Preview strategy.</span> {selectedStrategyOption.name} is
                       a BitYield strategy contract paying a fixed {apy}% APY. It models {selectedStrategyOption.targetProtocol} but
-                      does not route to it yet — live protocol integration is planned for v0.2. The rate is set by the contract, not live market yield.
+                      does not route to it yet. Live protocol integration is planned for v0.2. The rate is set by the contract, not live market yield.
                     </li>
                     <li>
                       <span className="text-zinc-300 font-medium">Custody.</span> Your sBTC is transferred to the strategy
@@ -411,7 +411,7 @@ export default function DepositPage() {
                     </li>
                     <li>
                       <span className="text-zinc-300 font-medium">Your Bitcoin stays on Bitcoin L1.</span> sBTC is 1:1
-                      Bitcoin-backed and secured by Bitcoin L1 consensus — no third-party wrapping or bridge custodian.
+                      Bitcoin-backed and secured by Bitcoin L1 consensus, with no third-party wrapping or bridge custodian.
                     </li>
                   </ul>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">

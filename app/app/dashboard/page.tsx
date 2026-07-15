@@ -19,7 +19,7 @@ const explorerTxUrl = (txid: string) =>
   `https://explorer.hiro.so/txid/${txid}?chain=${NETWORK_NAME === 'mainnet' ? 'mainnet' : 'testnet'}`;
 
 function formatWhen(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
@@ -126,9 +126,9 @@ export default function DashboardPage() {
                       <button
                         onClick={refresh}
                         className="text-lg font-mono text-amber-400 hover:underline cursor-pointer"
-                        title="We couldn't load your balance — your sBTC is safe. Tap to retry."
+                        title="We couldn't load your balance. Your sBTC is safe. Tap to retry."
                       >
-                        — · Retry
+                        Retry
                       </button>
                     ) : (
                       <p className="text-lg font-mono">
@@ -269,7 +269,7 @@ export default function DashboardPage() {
                           </div>
                           <div className="text-right shrink-0">
                             <p className="font-mono text-sm tabular-nums">
-                              {t.amountSats != null ? `${satsToBtc(BigInt(t.amountSats)).toFixed(8)} BTC` : '—'}
+                              {t.amountSats != null ? `${satsToBtc(BigInt(t.amountSats)).toFixed(8)} BTC` : '-'}
                             </p>
                             <a
                               href={explorerTxUrl(t.txid)}

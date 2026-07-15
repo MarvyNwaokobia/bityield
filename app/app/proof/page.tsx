@@ -89,7 +89,7 @@ export default function ProofPage() {
         </div>
         <p className="text-zinc-400 leading-relaxed mb-10 max-w-2xl">
           Every BitYield deposit and withdrawal is a real transaction settled on Stacks and secured
-          by Bitcoin. This page reads live activity straight from the canonical chain — anyone can
+          by Bitcoin. This page reads live activity straight from the canonical chain, so anyone can
           verify it, and each row links to the public explorer.
         </p>
 
@@ -167,7 +167,7 @@ export default function ProofPage() {
                         {t.strategy && <span className="text-zinc-500 font-normal"> · {t.strategy}</span>}
                       </td>
                       <td className="px-4 py-3 font-mono text-zinc-300 whitespace-nowrap">
-                        {t.amountSats != null ? `${satsToBtc(BigInt(t.amountSats)).toFixed(8)} BTC` : '—'}
+                        {t.amountSats != null ? `${satsToBtc(BigInt(t.amountSats)).toFixed(8)} BTC` : '-'}
                       </td>
                       <td className="px-4 py-3 font-mono text-zinc-400 whitespace-nowrap">
                         {t.sender.slice(0, 6)}…{t.sender.slice(-4)}

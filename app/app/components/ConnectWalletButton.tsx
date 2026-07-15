@@ -55,7 +55,7 @@ export function ConnectWalletButton() {
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      // Clipboard unavailable — silently ignore.
+      // Clipboard unavailable, silently ignore.
     }
   };
 

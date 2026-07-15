@@ -43,18 +43,18 @@ const Icon = {
 
 // ─── Content ─────────────────────────────────────────────────────────────────
 
-const HERO_BULLETS = ['Non-custodial — your keys', 'No bridges to manage', 'Zero gas fees to pay'];
+const HERO_BULLETS = ['Non-custodial: your keys', 'No bridges to manage', 'Zero gas fees to pay'];
 
 const FEATURES = [
-  { icon: Icon.key, title: 'Your keys, your Bitcoin', desc: 'Non-custodial by design. Your BTC stays under your control — BitYield never holds it.' },
+  { icon: Icon.key, title: 'Your keys, your Bitcoin', desc: 'Non-custodial by design. Your BTC stays under your control. BitYield never holds it.' },
   { icon: Icon.shield, title: 'No bridges, no wrapping', desc: 'sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1. No synthetic assets, no bridge risk.' },
   { icon: Icon.bolt, title: 'Zero gas fees', desc: 'Every transaction is sponsored. You never need to hold or spend STX to deposit or withdraw.' },
-  { icon: Icon.chart, title: 'Yield paid in Bitcoin', desc: 'Earnings are denominated and paid in BTC — never points, tokens, or derivatives.' },
+  { icon: Icon.chart, title: 'Yield paid in Bitcoin', desc: 'Earnings are denominated and paid in BTC, never points, tokens, or derivatives.' },
 ];
 
 const HOW_STEPS = [
   { n: '01', title: 'Connect your wallet', desc: 'Link a Stacks wallet in seconds. No new accounts, no seed phrases to create.' },
-  { n: '02', title: 'Choose your yield', desc: 'Pick a strategy and see the rate up front — always denominated in Bitcoin.' },
+  { n: '02', title: 'Choose your yield', desc: 'Pick a strategy and see the rate up front, always denominated in Bitcoin.' },
   { n: '03', title: 'Earn, withdraw anytime', desc: 'Non-custodial and open-ended. Your BTC works for you; pull it out whenever.' },
 ];
 
@@ -68,15 +68,15 @@ const INFRA = [
 ];
 
 const FAQ = [
-  { q: 'Does my Bitcoin leave the Bitcoin network?', a: 'No. sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1 consensus. You hold it under your own keys — no third-party custodian and no wrapped-token bridge risk.' },
-  { q: 'Why don’t I pay gas in STX?', a: 'BitYield sponsors every transaction. When you sign a deposit or withdrawal, our sponsor account pays the STX network fee for you — so you never need to hold STX.' },
-  { q: 'How are the yield rates generated today?', a: 'Each strategy is a BitYield smart contract paying a fixed, transparent APY today — clearly labelled “Preview” and fully verifiable on-chain. Next, we route deposits into live protocols (starting with Zest) so your yield comes straight from the market.' },
-  { q: 'Can I withdraw at any time?', a: 'Yes, always. Positions are non-custodial and open-ended — trigger a withdrawal from your dashboard and your principal plus any accrued yield returns to your wallet. No lock-ups, no waiting periods.' },
-  { q: 'What is sBTC, and how do I get it?', a: 'sBTC is Bitcoin on Stacks — 1:1 Bitcoin-backed, so 1 sBTC always equals 1 BTC. You get it by sending BTC through the official sBTC bridge (sbtc.stacks.co), and BitYield links you straight there from the deposit screen.' },
-  { q: 'Which wallets are supported?', a: 'Any Stacks wallet works — we recommend Leather, and Xverse is supported too. Connect in one tap; there is no separate BitYield account to create.' },
-  { q: 'Is BitYield safe to use?', a: 'BitYield is non-custodial by design: your funds live in open, on-chain smart contracts that only you can withdraw from — never on our servers. Every contract is public and verifiable on the explorer (see the Proof page), and we have deliberately kept them simple and transparent. A third-party security audit is on our roadmap as we scale.' },
-  { q: 'Are there lock-ups, minimums, or hidden fees?', a: 'None. Deposit and withdraw whenever you like, in any amount. Gas is fully sponsored, so you pay no network fees — and there are no deposit or withdrawal charges.' },
-  { q: 'What happens to my funds if BitYield goes away?', a: 'They stay yours. Your position lives in an on-chain smart contract keyed to your address — not on our servers — so even if the BitYield app disappeared, only you can withdraw your funds by calling the contract directly.' },
+  { q: 'Does my Bitcoin leave the Bitcoin network?', a: 'No. sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1 consensus. You hold it under your own keys, with no third-party custodian and no wrapped-token bridge risk.' },
+  { q: 'Why don’t I pay gas in STX?', a: 'BitYield sponsors every transaction. When you sign a deposit or withdrawal, our sponsor account pays the STX network fee for you, so you never need to hold STX.' },
+  { q: 'How are the yield rates generated today?', a: 'Each strategy is a BitYield smart contract paying a fixed, transparent APY today, clearly labelled “Preview” and fully verifiable on-chain. Next, we route deposits into live protocols (starting with Zest) so your yield comes straight from the market.' },
+  { q: 'Can I withdraw at any time?', a: 'Yes, always. Positions are non-custodial and open-ended. Trigger a withdrawal from your dashboard and your principal plus any accrued yield returns to your wallet. No lock-ups, no waiting periods.' },
+  { q: 'What is sBTC, and how do I get it?', a: 'sBTC is Bitcoin on Stacks: 1:1 Bitcoin-backed, so 1 sBTC always equals 1 BTC. You get it by sending BTC through the official sBTC bridge (sbtc.stacks.co), and BitYield links you straight there from the deposit screen.' },
+  { q: 'Which wallets are supported?', a: 'Any Stacks wallet works. We recommend Leather, and Xverse is supported too. Connect in one tap; there is no separate BitYield account to create.' },
+  { q: 'Is BitYield safe to use?', a: 'BitYield is non-custodial by design: your funds live in open, on-chain smart contracts that only you can withdraw from, never on our servers. Every contract is public and verifiable on the explorer (see the Proof page), and we have deliberately kept them simple and transparent. A third-party security audit is on our roadmap as we scale.' },
+  { q: 'Are there lock-ups, minimums, or hidden fees?', a: 'None. Deposit and withdraw whenever you like, in any amount. Gas is fully sponsored, so you pay no network fees, and there are no deposit or withdrawal charges.' },
+  { q: 'What happens to my funds if BitYield goes away?', a: 'They stay yours. Your position lives in an on-chain smart contract keyed to your address, not on our servers, so even if the BitYield app disappeared, only you can withdraw your funds by calling the contract directly.' },
 ];
 
 // ─── Pieces ──────────────────────────────────────────────────────────────────
@@ -93,7 +93,7 @@ function LivePill() {
   );
 }
 
-// Product mockup shown in the hero — mirrors the real dashboard.
+// Product mockup shown in the hero. Mirrors the real dashboard.
 function AppPreview() {
   return (
     <div className="relative motion-safe:animate-floaty">
@@ -144,7 +144,7 @@ function LiveProof() {
   useEffect(() => {
     fetchRouterStats(50).then(setStats).catch(() => {});
   }, []);
-  const volume = stats ? Number(satsToBtc(BigInt(stats.depositVolumeSats)).toFixed(8)).toString() : '—';
+  const volume = stats ? Number(satsToBtc(BigInt(stats.depositVolumeSats)).toFixed(8)).toString() : '-';
   const sponsoredPct = stats && stats.txs.length > 0 ? Math.round((stats.sponsoredCount / stats.txs.length) * 100) : 100;
 
   return (
@@ -161,8 +161,8 @@ function LiveProof() {
         </Link>
       </div>
       <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-6 border-t border-white/10 pt-8">
-        <ProofMetric value={stats ? String(stats.totalDeposits) : '—'} label="Deposits" />
-        <ProofMetric value={stats ? String(stats.totalWithdrawals) : '—'} label="Withdrawals" />
+        <ProofMetric value={stats ? String(stats.totalDeposits) : '-'} label="Deposits" />
+        <ProofMetric value={stats ? String(stats.totalWithdrawals) : '-'} label="Withdrawals" />
         <ProofMetric value={volume} label="BTC deposited" />
         <ProofMetric value={`${sponsoredPct}%`} label="Gas sponsored" />
       </div>
@@ -234,7 +234,7 @@ export default function Home() {
               <span className="text-bitcoin">Earn Bitcoin.</span>
             </motion.h1>
             <motion.p variants={fadeSlideUp} className="text-lg text-zinc-400 max-w-lg mx-auto lg:mx-0 mt-6 leading-relaxed">
-              Deposit sBTC and earn yield paid in Bitcoin — non-custodial, no bridges to
+              Deposit sBTC and earn yield paid in Bitcoin. Non-custodial, no bridges to
               manage, and zero gas fees.
             </motion.p>
             <motion.ul variants={fadeSlideUp} className="mt-7 flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-x-6 gap-y-2.5 max-w-lg mx-auto lg:mx-0">
@@ -253,7 +253,7 @@ export default function Home() {
             </motion.div>
           </motion.div>
 
-          {/* Right — product mockup */}
+          {/* Right: product mockup */}
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -332,7 +332,7 @@ export default function Home() {
           </h2>
           <p className="text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto">
             The yield infrastructure is already live and audited on Stacks. BitYield is the
-            simple front door — so your Bitcoin doesn’t have to sit idle.
+            simple front door, so your Bitcoin doesn’t have to sit idle.
           </p>
         </RevealOnScroll>
       </section>
@@ -388,7 +388,7 @@ export default function Home() {
               Put your Bitcoin to work.
             </h2>
             <p className="text-lg text-zinc-300 mb-10 leading-relaxed max-w-lg mx-auto">
-              Live on Bitcoin mainnet. Connect, deposit sBTC, and start earning — with zero gas to pay.
+              Live on Bitcoin mainnet. Connect, deposit sBTC, and start earning, with zero gas to pay.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <PrimaryLinkButton href="/dashboard" className="px-9 py-4 text-base w-full sm:w-auto">Launch App</PrimaryLinkButton>

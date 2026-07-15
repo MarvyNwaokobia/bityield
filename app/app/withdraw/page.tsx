@@ -68,7 +68,7 @@ function WithdrawPageInner() {
         setStep('confirm');
       } else if (outcome.status === 'timeout') {
         setErrorMessage(
-          'This is taking longer than expected. Your withdrawal may still confirm — check back in a few minutes before trying again.'
+          'This is taking longer than expected. Your withdrawal may still confirm. Check back in a few minutes before trying again.'
         );
         setStep('error');
       } else {

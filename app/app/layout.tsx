@@ -8,9 +8,9 @@ const spaceGrotesk = Space_Grotesk({ variable: "--font-space-grotesk", subsets: 
 const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "BitYield — Hold Bitcoin. Earn Bitcoin.",
+  title: "BitYield: Hold Bitcoin. Earn Bitcoin.",
   description:
-    "Deposit sBTC and earn yield paid in Bitcoin — non-custodial, no bridges to manage, and zero gas fees. Live on Bitcoin mainnet.",
+    "Deposit sBTC and earn yield paid in Bitcoin. Non-custodial, no bridges to manage, and zero gas fees. Live on Bitcoin mainnet.",
 };
 
 export default function RootLayout({
