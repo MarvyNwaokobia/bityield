@@ -13,8 +13,8 @@ export function Logo() {
       <Image
         src="/logo-mark.png"
         alt="BitYield logo"
-        width={24}
-        height={24}
+        width={22}
+        height={22}
         priority
       />
       <span className="font-display font-bold text-xl tracking-tight">
