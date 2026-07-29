@@ -230,6 +230,7 @@ export default function Home() {
       <nav className="fixed top-0 inset-x-0 z-50 px-6 py-4 flex items-center justify-between border-b border-zinc-800/50 bg-[#0a0a0a]/80 backdrop-blur-md">
         <Logo />
         <div className="flex items-center gap-3 sm:gap-6">
+          <Link href="/#waitlist" className="hidden md:block text-sm text-zinc-400 hover:text-white transition-colors">Waitlist</Link>
           <Link href="/proof" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Proof</Link>
           <Link href="/dashboard" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Dashboard</Link>
           <ConnectWalletButton />
@@ -272,6 +273,13 @@ export default function Home() {
                 See the on-chain proof →
               </Link>
             </motion.div>
+            <motion.p variants={fadeSlideUp} className="mt-5 text-sm text-zinc-500">
+              Not ready to deposit?{' '}
+              <Link href="#waitlist" className="text-bitcoin hover:underline">
+                Join the waitlist
+              </Link>{' '}
+              for early access at launch.
+            </motion.p>
           </motion.div>
 
           {/* Right: product mockup */}
@@ -403,7 +411,8 @@ export default function Home() {
       </section>
 
       {/* Waitlist */}
-      <section className="px-6 py-24 md:py-28 border-t border-zinc-900">
+      {/* scroll-mt clears the fixed nav when arriving via /#waitlist */}
+      <section id="waitlist" className="scroll-mt-24 px-6 py-24 md:py-28 border-t border-zinc-900">
         <RevealOnScroll className="max-w-3xl mx-auto">
           <div className="glass card-sheen rounded-3xl p-8 md:p-12 text-center">
             <SectionLabel>Early access</SectionLabel>
