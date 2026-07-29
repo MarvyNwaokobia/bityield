@@ -384,6 +384,9 @@ export default function DepositPage() {
                     <p className="leading-relaxed mt-0.5">
                       This transaction is fully sponsored. You do not need to hold or spend STX to pay for Stacks network transaction fees.
                     </p>
+                    <p className="leading-relaxed mt-1.5 text-zinc-500">
+                      Sponsorship is part of early access and won&rsquo;t run forever, so at some point network fees become yours to cover. Even then you won&rsquo;t need to hold STX, just a small fee settled in sBTC or taken from the yield you&rsquo;ve already earned.
+                    </p>
                   </div>
                 </div>
 
