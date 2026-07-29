@@ -34,6 +34,9 @@ yarn-error.log*
 .env*
 !.env.example
 
+# local dev waitlist store (never a real backend)
+.waitlist.local.jsonl
+
 # vercel
 .vercel
 

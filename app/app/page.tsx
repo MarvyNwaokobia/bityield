@@ -7,6 +7,7 @@ import { ConnectWalletButton } from './components/ConnectWalletButton';
 import { Logo } from './components/Logo';
 import { RevealOnScroll, RevealItem } from './components/RevealOnScroll';
 import { PrimaryLinkButton } from './components/Button';
+import { WaitlistForm } from './components/WaitlistForm';
 import { fadeSlideUp, staggerContainer } from '@/lib/motion';
 import { fetchRouterStats, type RouterStats } from '@/lib/stacks/analytics';
 import { satsToBtc } from '@/lib/stacks/format';
@@ -67,15 +68,35 @@ const INFRA = [
   { name: 'Dual Stacking', role: 'PoX yield', live: false },
 ];
 
-const FAQ = [
+const FAQ: { q: string; a: ReactNode }[] = [
   { q: 'Does my Bitcoin leave the Bitcoin network?', a: 'No. sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1 consensus. You hold it under your own keys, with no third-party custodian and no wrapped-token bridge risk.' },
-  { q: 'Why don’t I pay gas in STX?', a: 'BitYield sponsors every transaction. When you sign a deposit or withdrawal, our sponsor account pays the STX network fee for you, so you never need to hold STX.' },
-  { q: 'How are the yield rates generated today?', a: 'Each strategy is a BitYield smart contract paying a fixed, transparent APY today, clearly labelled “Preview” and fully verifiable on-chain. Next, we route deposits into live protocols (starting with Zest) so your yield comes straight from the market.' },
+  { q: 'Why don’t I pay gas in STX?', a: 'BitYield sponsors it for you. When you sign a deposit or withdrawal, our sponsor account pays the STX network fee, so you can start earning without first going out to buy STX. Sponsorship is part of early access and won’t run forever, so at some point network fees become yours to cover. Even then you won’t need to hold STX, just a small fee settled in sBTC or taken from the yield you’ve already earned.' },
+  {
+    q: 'How are the yield rates generated today?',
+    a: (
+      <>
+        Each strategy is a BitYield smart contract paying a fixed, transparent APY today, clearly
+        labelled “Preview” and fully verifiable on-chain. Next, we route deposits into live
+        protocols, starting with{' '}
+        <a
+          href="https://zestprotocol.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-bitcoin hover:underline"
+        >
+          Zest Protocol
+        </a>
+        , the largest Bitcoin lending market on Stacks, so your yield comes straight from the
+        market.
+      </>
+    ),
+  },
   { q: 'Can I withdraw at any time?', a: 'Yes, always. Positions are non-custodial and open-ended. Trigger a withdrawal from your dashboard and your principal plus any accrued yield returns to your wallet. No lock-ups, no waiting periods.' },
   { q: 'What is sBTC, and how do I get it?', a: 'sBTC is Bitcoin on Stacks: 1:1 Bitcoin-backed, so 1 sBTC always equals 1 BTC. You get it by sending BTC through the official sBTC bridge (sbtc.stacks.co), and BitYield links you straight there from the deposit screen.' },
-  { q: 'Which wallets are supported?', a: 'Any Stacks wallet works. We recommend Leather, and Xverse is supported too. Connect in one tap; there is no separate BitYield account to create.' },
+  { q: 'Which wallets are supported?', a: 'We recommend Leather or Xverse. They are the two most widely used Bitcoin wallets built for Stacks, both are free, and either one takes a couple of minutes to set up. Connect in one tap; there is no separate BitYield account to create. If you already use a different Stacks wallet it will most likely work too, but Leather and Xverse are the ones we actively test and support.' },
   { q: 'Is BitYield safe to use?', a: 'BitYield is non-custodial by design: your funds live in open, on-chain smart contracts that only you can withdraw from, never on our servers. Every contract is public and verifiable on the explorer (see the Proof page), and we have deliberately kept them simple and transparent. A third-party security audit is on our roadmap as we scale.' },
-  { q: 'Are there lock-ups, minimums, or hidden fees?', a: 'None. Deposit and withdraw whenever you like, in any amount. Gas is fully sponsored, so you pay no network fees, and there are no deposit or withdrawal charges.' },
+  { q: 'Are there lock-ups, minimums, or hidden fees?', a: 'No lock-ups and no hidden fees. Deposit and withdraw whenever you like. Today you pay nothing at all: no deposit charge, no withdrawal charge, and gas is sponsored. Nothing is ever taken from your position without being shown to you first, and anything that changes gets announced before it takes effect, never quietly.' },
+  { q: 'How does BitYield make money?', a: 'Not from you, yet. There are no deposit fees, no withdrawal fees, and no cut of your yield during early access. Longer term BitYield will take a small percentage of the yield you earn, and nothing else: nothing to deposit, nothing to withdraw, and nothing at all in a period where your position doesn’t earn. We only do well when you do. We’ll publish the exact rate well before it applies, and rates on the site will always be shown net of fees, so the number you see is the number you keep.' },
   { q: 'What happens to my funds if BitYield goes away?', a: 'They stay yours. Your position lives in an on-chain smart contract keyed to your address, not on our servers, so even if the BitYield app disappeared, only you can withdraw your funds by calling the contract directly.' },
 ];
 
@@ -152,8 +173,8 @@ function LiveProof() {
       <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-6">
         <div>
           <p className="text-bitcoin font-mono text-xs uppercase tracking-widest mb-2">Live on-chain</p>
-          <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight max-w-md leading-snug">
-            Every deposit is a real, public Bitcoin transaction.
+          <h2 className="font-display text-2xl md:text-3xl font-bold tracking-tight leading-snug xl:whitespace-nowrap">
+            Every deposit is a real, public Bitcoin transaction
           </h2>
         </div>
         <Link href="/proof" className="text-sm font-semibold text-bitcoin hover:underline whitespace-nowrap self-start md:self-auto">
@@ -174,7 +195,7 @@ function SectionLabel({ children }: { children: ReactNode }) {
   return <p className="text-bitcoin font-mono text-xs uppercase tracking-widest mb-3">{children}</p>;
 }
 
-function FaqItem({ q, a }: { q: string; a: string }) {
+function FaqItem({ q, a }: { q: string; a: ReactNode }) {
   const [open, setOpen] = useState(false);
   return (
     <div className="bg-zinc-900/40 border border-zinc-800 rounded-2xl overflow-hidden transition-colors hover:border-zinc-700">
@@ -229,9 +250,9 @@ export default function Home() {
               <LivePill />
             </motion.div>
             <motion.h1 variants={fadeSlideUp} className="font-display text-5xl md:text-7xl font-bold tracking-[-0.03em] leading-[0.98]">
-              Hold Bitcoin.
+              Hold Bitcoin
               <br />
-              <span className="text-bitcoin">Earn Bitcoin.</span>
+              <span className="text-bitcoin">Earn Bitcoin</span>
             </motion.h1>
             <motion.p variants={fadeSlideUp} className="text-lg text-zinc-400 max-w-lg mx-auto lg:mx-0 mt-6 leading-relaxed">
               Deposit sBTC and earn yield paid in Bitcoin. Non-custodial, no bridges to
@@ -266,17 +287,17 @@ export default function Home() {
       </section>
 
       {/* Live proof */}
-      <section className="px-6 pb-24 md:pb-28 max-w-5xl mx-auto -mt-6">
+      <section className="px-6 pb-24 md:pb-28 max-w-6xl mx-auto -mt-6">
         <LiveProof />
       </section>
 
       {/* Why / features */}
       <section className="px-6 py-24 md:py-32 border-t border-zinc-900">
         <div className="max-w-6xl mx-auto">
-          <RevealOnScroll className="max-w-2xl mb-16">
+          <RevealOnScroll className="max-w-5xl mb-16">
             <SectionLabel>Why BitYield</SectionLabel>
-            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-[1.05]">
-              Built to be trusted, not just used.
+            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-[1.05] lg:whitespace-nowrap">
+              Built to be trusted, not just used
             </h2>
           </RevealOnScroll>
           <RevealOnScroll stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -296,7 +317,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto">
           <RevealOnScroll className="mb-16">
             <SectionLabel>Simple as it gets</SectionLabel>
-            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Three steps to yield.</h2>
+            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Three steps to yield</h2>
           </RevealOnScroll>
           <RevealOnScroll stagger className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {HOW_STEPS.map(({ n, title, desc }) => (
@@ -325,10 +346,10 @@ export default function Home() {
       {/* Opportunity band */}
       <section className="px-6 py-24 md:py-32 border-t border-zinc-900 relative overflow-hidden">
         <div aria-hidden className="absolute inset-0 mesh-bg opacity-60 pointer-events-none" />
-        <RevealOnScroll className="relative max-w-3xl mx-auto text-center">
+        <RevealOnScroll className="relative max-w-6xl mx-auto text-center">
           <SectionLabel>The opportunity</SectionLabel>
-          <h2 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] mb-6">
-            $1.3 trillion in Bitcoin earns 0%.
+          <h2 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] mb-6 xl:whitespace-nowrap">
+            $1.3 trillion in Bitcoin earns 0%
           </h2>
           <p className="text-lg text-zinc-400 leading-relaxed max-w-xl mx-auto">
             The yield infrastructure is already live and audited on Stacks. BitYield is the
@@ -340,10 +361,12 @@ export default function Home() {
       {/* Infrastructure */}
       <section className="px-6 py-24 md:py-32 border-t border-zinc-900">
         <div className="max-w-6xl mx-auto">
-          <RevealOnScroll className="max-w-2xl mb-16">
+          <RevealOnScroll className="max-w-4xl mb-16">
             <SectionLabel>Built on proven infrastructure</SectionLabel>
-            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-snug">
-              We don’t reinvent Bitcoin yield. We make it usable.
+            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight leading-snug lg:whitespace-nowrap">
+              We don’t reinvent Bitcoin yield
+              <br />
+              we make it usable
             </h2>
           </RevealOnScroll>
           <RevealOnScroll stagger className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -367,7 +390,7 @@ export default function Home() {
         <div className="max-w-3xl mx-auto">
           <RevealOnScroll className="mb-14">
             <SectionLabel>FAQ</SectionLabel>
-            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Good questions.</h2>
+            <h2 className="font-display text-3xl md:text-5xl font-bold tracking-tight">Good questions</h2>
           </RevealOnScroll>
           <RevealOnScroll stagger className="space-y-3">
             {FAQ.map(({ q, a }) => (
@@ -379,13 +402,33 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Waitlist */}
+      <section className="px-6 py-24 md:py-28 border-t border-zinc-900">
+        <RevealOnScroll className="max-w-3xl mx-auto">
+          <div className="glass card-sheen rounded-3xl p-8 md:p-12 text-center">
+            <SectionLabel>Early access</SectionLabel>
+            <h2 className="font-display text-3xl md:text-4xl font-bold tracking-tight mb-4">
+              Be first through the door
+            </h2>
+            <p className="text-zinc-400 leading-relaxed max-w-lg mx-auto mb-8">
+              BitYield is live on Bitcoin mainnet today, running as a controlled demo. Leave your
+              email and you&rsquo;ll be among the first let in when we open to everyone, and the
+              first to hear when deposits start earning live protocol yield.
+            </p>
+            <div className="max-w-xl mx-auto">
+              <WaitlistForm />
+            </div>
+          </div>
+        </RevealOnScroll>
+      </section>
+
       {/* Final CTA */}
       <section className="px-6 py-24 md:py-28">
         <RevealOnScroll className="relative max-w-5xl mx-auto overflow-hidden rounded-3xl border border-bitcoin/20 px-8 py-16 md:py-20 text-center">
           <div aria-hidden className="absolute inset-0 mesh-bg pointer-events-none" />
           <div className="relative">
             <h2 className="font-display text-4xl md:text-6xl font-bold tracking-tight leading-[1.05] mb-5">
-              Put your Bitcoin to work.
+              Put your Bitcoin to work
             </h2>
             <p className="text-lg text-zinc-300 mb-10 leading-relaxed max-w-lg mx-auto">
               Live on Bitcoin mainnet. Connect, deposit sBTC, and start earning, with zero gas to pay.
