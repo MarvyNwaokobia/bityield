@@ -274,7 +274,6 @@ export default function Home() {
               </Link>
             </motion.div>
             <motion.p variants={fadeSlideUp} className="mt-5 text-sm text-zinc-500">
-              Not ready to deposit?{' '}
               <Link href="#waitlist" className="text-bitcoin hover:underline">
                 Join the waitlist
               </Link>{' '}
