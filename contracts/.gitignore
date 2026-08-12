@@ -15,3 +15,11 @@
 # coverage/cost reports
 /coverage
 costs-reports.json
+
+# Milestone 2 mainnet-fork test scratch (regenerable; see docs/milestone-2-plan.md).
+/.cache_*
+/spike/
+/Clarinet.spike.toml
+/Clarinet.zest*.toml
+/Clarinet.dual.toml
+/contracts/spike-zest-supplier.clar
