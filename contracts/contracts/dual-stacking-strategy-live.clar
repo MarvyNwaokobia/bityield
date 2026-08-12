@@ -105,6 +105,34 @@
   )
 )
 
+;; Owner-only: transfer ownership (e.g. to a multisig).
+(define-public (set-contract-owner (new-owner principal))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-OWNER)
+    (var-set contract-owner new-owner)
+    (ok new-owner)
+  )
+)
+
+;; Owner-only emergency: sweep sBTC (which this strategy simply holds, since Dual
+;; Stacking is balance-based) out to `recipient`. Recovery escape hatch for the
+;; controlled testing phase, if the router withdraw path is ever unusable. A
+;; public launch moves ownership to a multisig (see docs).
+(define-public (owner-sweep-ft (token <sip-010-trait>) (amount uint) (recipient principal))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-OWNER)
+    (as-contract (contract-call? token transfer amount tx-sender recipient none))
+  )
+)
+
+;; Owner-only: sweep loose STX out of the strategy.
+(define-public (owner-sweep-stx (amount uint) (recipient principal))
+  (begin
+    (asserts! (is-eq tx-sender (var-get contract-owner)) ERR-NOT-OWNER)
+    (as-contract (stx-transfer? amount tx-sender recipient))
+  )
+)
+
 ;; TVL = this strategy's sBTC balance (principal + accrued rewards).
 (define-read-only (get-tvl)
   (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance (as-contract tx-sender))
