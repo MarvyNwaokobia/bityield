@@ -1,19 +1,40 @@
 # Milestone 2 Testing and Deploy Guide (handoff)
 
-Status as of 2026-08-01: **M1 approved.** M2 is built, committed, and pushed to
-`main`. The live routing contracts and app wiring exist but are **NOT deployed to
-mainnet** and the withdraw path is **not yet proven end to end**. This doc is the
-step-by-step for the mainnet testing session, written so any session can pick it
-up. See also `docs/milestone-2-plan.md` for the full design and evidence.
+Status as of 2026-08-12: **M1 approved; M2 DEPLOYED TO MAINNET and configured.**
+The router + both live strategies are live under a fresh deployer, the router is
+configured (sBTC set, both strategies registered + active), the Zest strategy is
+funded with 1 STX for Pyth fees, and `app/.env.local` points at the new addresses.
+REMAINING: the dust deposit/withdraw test per route (the withdraw path is still
+unproven end to end on mainnet), and the Dual Stacking Stacks-team confirmation.
+See also `docs/milestone-2-plan.md` for the full design and evidence.
 
-## Key addresses (mainnet)
+## Deployed M2 contracts (mainnet)
+
+Deployer / owner: `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB` (fresh, isolated).
+
+| Contract | Deploy tx |
+|----------|-----------|
+| `SP37FXV5….yield-router` | `0xfc904892…f98e77b4` |
+| `SP37FXV5….yield-strategy-trait` | `0xf6abb496…be82cf5a` |
+| `SP37FXV5….sip-010-trait` | `0x86ec0b02…64e8795` |
+| `SP37FXV5….mock-sbtc-token` | `0x9b752683…dc57a732` |
+| `SP37FXV5….zest-strategy-live` | `0xae20ad6f…6c9c583649` |
+| `SP37FXV5….dual-stacking-strategy-live` | `0x8e48dd90…b43744aaa` |
+
+Post-deploy config (all confirmed success):
+- `set-sbtc-token` -> `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token` (`0x1c75cd5f…c1a32fb`)
+- `add-strategy "zest"` -> `zest-strategy-live` (`0xcc8a8734…a99eae11`)
+- `add-strategy "dual-stacking"` -> `dual-stacking-strategy-live` (`0x8e853d92…1eff1467`)
+- funded `zest-strategy-live` with 1 STX for Pyth fees (`0x6cbe8e1f…480f22c`)
+
+## Key accounts (mainnet)
 
 | Role | Address | Notes |
 |------|---------|-------|
-| Deployer | `SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN` | 6.10 STX, 0 sBTC (as of 2026-08-01). Mnemonic in `contracts/settings/Mainnet.toml` (gitignored). |
-| Sponsor | `SP1FMF8WWHPNW2X20N0SCV6Q144K2GNQG8K6YDND3` | 11.96 STX. Key in `app/.env.local` `SPONSOR_PRIVATE_KEY` (gitignored, never print it). |
-| Test wallet | TODO (screenshot showed `SP2JS…PJT3`) | Holds the sBTC used for the actual deposit tests. |
-| M1 router (old, live) | `SP360...yield-router` | Old withdraw interface; M1 demo positions live here. Do not reuse. |
+| M2 deployer / owner | `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB` | Fresh isolated deployer; owns the M2 contracts (emergency recovery + admin). Mnemonic in `contracts/settings/Mainnet.toml` (gitignored). |
+| Sponsor | `SP1FMF8WWHPNW2X20N0SCV6Q144K2GNQG8K6YDND3` | Pays user tx fees. Key in `app/.env.local` (gitignored, never print). |
+| Test wallet | `SP2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219TZ6PJT3` | ~0.00044 sBTC; connect in browser for the deposit test. |
+| M1 router (old, live) | `SP360...yield-router` | M1 demo positions; do not reuse. |
 
 ## What is and is not deployed
 
