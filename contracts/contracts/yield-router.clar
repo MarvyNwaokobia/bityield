@@ -89,7 +89,7 @@
   )
 )
 
-(define-public (withdraw (position-id uint) (strategy <yield-strategy-trait>) (token <sip-010-trait>))
+(define-public (withdraw (position-id uint) (strategy <yield-strategy-trait>) (token <sip-010-trait>) (price-feed-bytes (optional (buff 8192))))
   (let (
       (caller tx-sender)
       (pos (unwrap! (map-get? positions { owner: tx-sender, position-id: position-id }) ERR-NOT-FOUND))
@@ -103,7 +103,7 @@
 
     ;; Delegate withdrawal and payout calculations to the strategy contract
     (let (
-        (payout (try! (contract-call? strategy withdraw (get amount pos) caller (get entry-block pos) (get apy-bps pos) token)))
+        (payout (try! (contract-call? strategy withdraw (get amount pos) caller (get entry-block pos) (get apy-bps pos) token price-feed-bytes)))
       )
       (map-set positions { owner: caller, position-id: position-id } (merge pos { closed: true }))
       (ok payout)

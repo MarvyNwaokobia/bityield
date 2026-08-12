@@ -28,7 +28,7 @@
   )
 )
 
-(define-public (withdraw (amount uint) (recipient principal) (entry-block uint) (apy-bps uint) (token <sip-010-trait>))
+(define-public (withdraw (amount uint) (recipient principal) (entry-block uint) (apy-bps uint) (token <sip-010-trait>) (price-feed-bytes (optional (buff 8192))))
   (begin
     (asserts! (is-authorized-router) ERR-NOT-ROUTER)
     (let (
