@@ -24,44 +24,66 @@ up. See also `docs/milestone-2-plan.md` for the full design and evidence.
 
 ## Deployment nuances (read before Phase 1)
 
-1. The router interface changed (withdraw now takes an optional price-feed buffer).
-   Clarity contracts are immutable, so deploy a NEW router under a NEW name, e.g.
-   `yield-router-v2`. The M1 router and its positions stay untouched.
-2. The live strategies default `authorized-router` to `.yield-router` (the OLD one).
-   After deploy, call `set-authorized-router` on each live strategy to point at
-   `...yield-router-v2`, or deposits fail authorization.
+1. NAMING COLLISION: the router withdraw interface changed AND the
+   `yield-strategy-trait` withdraw signature changed with it. On the M1 deployer
+   `SP360...`, the names `yield-router` and `yield-strategy-trait` are already
+   taken by the OLD, incompatible versions, and Clarity contracts are immutable.
+   So the whole M2 set needs fresh names.
+2. RECOMMENDED APPROACH: deploy the entire M2 set under a FRESH deployer address
+   (new keypair, funded ~6-8 STX). Then `sip-010-trait`, `yield-strategy-trait`,
+   `yield-router`, `zest-strategy-live`, `dual-stacking-strategy-live` all deploy
+   under their normal names with relative references intact, the strategies'
+   default `authorized-router` (`.yield-router`) already points at the new router
+   (NO set-authorized-router needed), and nothing collides with M1. This deploys
+   the contracts exactly as committed, no source edits.
+   Alternative (messier): reuse `SP360` with `-v2` names and edit the router +
+   strategy sources to reference `yield-strategy-trait-v2`. Avoid unless you
+   specifically need everything under `SP360`.
 3. The live strategies reference mainnet Zest / rewards contracts by principal, so
-   they can only be deployed against mainnet (not a bare local/testnet project). A
-   Clarinet deployment plan that includes them must declare those mainnet contracts
-   as requirements so it typechecks.
-4. `zest-strategy-live` must hold a little STX (~1 STX) to pay the Pyth update fee
-   charged on withdraw.
+   the deployment plan must declare those mainnet contracts as requirements
+   (clarinet fetches their interfaces) so it typechecks. Plan generation may need
+   a small iteration during the session; a mainnet deploy cannot be fully dry-run
+   locally.
+4. `zest-strategy-live` must hold ~1 STX to pay the Pyth update fee on withdraw.
+5. The fresh deployer becomes the strategies' `contract-owner` (for recovery) and
+   the router admin (`add-strategy` / `set-sbtc-token`).
 
 ## SAFETY (do not skip)
 
 - Test with dust amounts only (e.g. 0.0001 sBTC). Contracts are unaudited and the
   withdraw path is unproven on mainnet.
-- RISK: neither live strategy has an owner emergency-withdraw. If the router
-  withdraw path has a bug, deposited sBTC could be stuck (recoverable only through
-  a working withdraw). STRONGLY consider adding an owner-only `emergency-withdraw`
-  to both live strategies before depositing real funds, or accept that the dust
-  test amount is at risk.
+- Owner recovery IS now in place (added 2026-08-01, compile-checked on the fork):
+  - `zest-strategy-live`: `owner-emergency-zest-redeem` (redeem sBTC from Zest to a
+    recipient, bypassing the router), plus `owner-sweep-ft` / `owner-sweep-stx`.
+  - `dual-stacking-strategy-live`: `owner-sweep-ft` / `owner-sweep-stx` (its sBTC
+    simply sits in the contract).
+  So dust is recoverable by the deployer if the router withdraw path is unusable.
+  These are single-key powers for the testing phase; a public launch moves
+  ownership to a multisig via `set-contract-owner`.
+- Also fixed (2026-08-01): `zest-strategy-live.set-authorized-router` was
+  router-gated (a deploy-blocking bug); it is now owner-gated.
 
 ## Phases
 
 ### Phase 0 — Prerequisites
-- Deployer STX for deploys (have ~6, enough) + ~1 STX to fund the Zest strategy.
-- Test wallet with a little sBTC for deposits.
-- Sponsor account funded (have ~12 STX).
+- FRESH deployer keypair funded with ~6-8 STX (for the ~5 contract deploys) plus
+  ~1 STX spare to fund the Zest strategy. Put its mnemonic in
+  `contracts/settings/Mainnet.toml` (gitignored) as the deployer.
+- Test wallet with a little sBTC for deposits (SP2JS...PJT3 has ~0.00044 sBTC).
+- Sponsor account funded (SP1FMF..., ~12 STX).
 - For Dual Stacking: Stacks-team confirmation that an enrolled CONTRACT is picked
   up by `distribute-rewards` (send `docs/outreach-dual-stacking.md`). Zest needs none.
 
-### Phase 1 — Deploy contracts (mainnet, user-executed)
-1. Deploy `yield-router-v2` (new name), `zest-strategy-live`, `dual-stacking-strategy-live`.
-2. `set-authorized-router` on each live strategy → `...yield-router-v2`.
-3. On the router: `set-sbtc-token` to canonical sBTC; `add-strategy "zest" → ...zest-strategy-live`;
+### Phase 1 — Deploy contracts (mainnet, user-executed, fresh deployer)
+1. Deploy the M2 set under the fresh deployer: `sip-010-trait`, `yield-strategy-trait`,
+   `yield-router`, `zest-strategy-live`, `dual-stacking-strategy-live`. (The
+   strategies' `authorized-router` default `.yield-router` already resolves to the
+   new router, so no set-authorized-router step is needed.)
+2. On the router: `set-sbtc-token` to canonical sBTC; `add-strategy "zest" → ...zest-strategy-live`;
    `add-strategy "dual-stacking" → ...dual-stacking-strategy-live`. Verify `get-strategy`.
-4. Send ~1 STX to `...zest-strategy-live`.
+3. Send ~1 STX to `...zest-strategy-live` (Pyth fee).
+4. (If you instead reuse SP360 with -v2 names, you WOULD need set-authorized-router
+   on each strategy after deploy. The fresh-deployer path avoids it.)
 
 ### Phase 2 — Point the app at live contracts
 - Env: `NEXT_PUBLIC_YIELD_ROUTER_ADDRESS=...yield-router-v2`,
