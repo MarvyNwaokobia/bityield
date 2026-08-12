@@ -2,7 +2,7 @@
 
 > One-tap Bitcoin yield for every BTC holder. Built on Stacks.
 
-**Live:** https://bityield-tau.vercel.app
+**Live:** https://bityield.click
 
 [![Built on Stacks](https://img.shields.io/badge/Built%20on-Stacks-orange)](https://stacks.co)
 [![Asset](https://img.shields.io/badge/Asset-sBTC-yellow)](https://stacks.co/sbtc)
@@ -221,7 +221,7 @@ team-funded demo. Mapping to the acceptance criteria:
 | Complete in a mainnet-ready environment | Contracts live on mainnet (see [Deployment](#deployment)) |
 | Public repo + demo | This repo + demo video below |
 
-**Demo video:** _(link coming — records the full mainnet deposit flow)_
+**Demo video:** [youtu.be/0t2uiyaKrnA](https://youtu.be/0t2uiyaKrnA) — full mainnet deposit flow
 
 **Live on-chain proof:** the app's [`/proof`](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet)
 page reads the router's real transaction history straight from the Stacks chain
@@ -296,13 +296,13 @@ automatically (`app/lib/stacks/network.ts`).
 
 ## Roadmap
 
-**v0.1 — deposit flow live on mainnet (in review — demo video pending)**
+**v0.1 — deposit flow live on mainnet (M1 approved)**
 - [x] YieldRouter + pluggable strategy contracts deployed on **Bitcoin mainnet**
 - [x] Next.js frontend: deposit, withdraw, dashboard
 - [x] Leather Wallet integration, real on-chain sBTC balances
 - [x] Fee abstraction via sponsored transactions (no STX required from users)
 - [x] Deposit preview, confirmation, and risk/audit disclosures
-- [ ] Demo video of the full mainnet deposit flow
+- [x] Demo video of the full mainnet deposit flow
 
 **v0.2 — real protocol routing**
 - [ ] Route the `zest` strategy into live **Zest Protocol** lending (real BTC yield)
