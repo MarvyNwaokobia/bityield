@@ -2,8 +2,14 @@ import { JsonRpcErrorCode, request } from '@stacks/connect';
 // Import the CV factory functions directly rather than via the `Cl` namespace
 // object: production tree-shaking strips the namespace's methods (`Cl.uint is
 // not a function`), but directly-referenced named exports survive.
-import { uintCV, stringAsciiCV, principalCV, type ClarityValue } from '@stacks/transactions';
+import { uintCV, stringAsciiCV, principalCV, bufferCV, someCV, noneCV, type ClarityValue } from '@stacks/transactions';
 import { HIRO_API_URL, NETWORK_NAME, SBTC_TOKEN, YIELD_ROUTER, STRATEGIES, type StrategyName, toContractId } from './network';
+import { fetchPythPriceFeedBytes } from './pyth';
+
+// Routes that supply into an oracle-priced protocol (Zest) must carry a fresh
+// Pyth price update on withdraw. Others (dual-stacking rewards, preview) pass
+// `none`.
+const STRATEGIES_NEEDING_PRICE_FEED: ReadonlySet<StrategyName> = new Set<StrategyName>(['zest']);
 
 export type TxOutcome =
   | { status: 'success'; txid: string }
@@ -155,12 +161,21 @@ export async function submitWithdrawTx(
     throw new Error(`Strategy contract for ${strategyName} is not configured.`);
   }
 
+  // Oracle-priced routes (Zest) need a fresh Pyth update in the same tx, or the
+  // protocol reverts. Fetch it right before submitting so it is not stale.
+  let priceFeed: ClarityValue = noneCV();
+  if (STRATEGIES_NEEDING_PRICE_FEED.has(strategyName)) {
+    const bytes = await fetchPythPriceFeedBytes();
+    priceFeed = someCV(bufferCV(bytes));
+  }
+
   return submitSponsoredContractCall(
     'withdraw',
     [
       uintCV(positionId),
       principalCV(toContractId(strategy)),
       principalCV(toContractId(SBTC_TOKEN)),
+      priceFeed,
     ],
     options
   );
