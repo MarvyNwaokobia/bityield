@@ -153,8 +153,8 @@ function AppPreview() {
 
 function ProofMetric({ value, label }: { value: string; label: string }) {
   return (
-    <div>
-      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight tabular-nums">{value}</p>
+    <div className="min-w-0">
+      <p className="font-display text-3xl md:text-4xl font-bold tracking-tight tabular-nums break-all">{value}</p>
       <p className="text-zinc-500 text-sm mt-1">{label}</p>
     </div>
   );
@@ -232,7 +232,7 @@ export default function Home() {
         <div className="flex items-center gap-3 sm:gap-6">
           <Link href="/#waitlist" className="hidden md:block text-sm text-zinc-400 hover:text-white transition-colors">Waitlist</Link>
           <Link href="/proof" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Proof</Link>
-          <Link href="/dashboard" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Dashboard</Link>
+          <Link href="/docs" className="hidden sm:block text-sm text-zinc-400 hover:text-white transition-colors">Docs</Link>
           <ConnectWalletButton />
           <span className="hidden sm:inline-flex">
             <PrimaryLinkButton href="/dashboard" className="px-5 py-2 text-sm">Launch App</PrimaryLinkButton>
@@ -458,6 +458,7 @@ export default function Home() {
           <Logo />
           <div className="flex items-center gap-6 text-zinc-500">
             <Link href="/dashboard" className="hover:text-white transition-colors">App</Link>
+            <Link href="/docs" className="hover:text-white transition-colors">Docs</Link>
             <Link href="/proof" className="hover:text-white transition-colors">Proof</Link>
             <span>Built on Stacks · Secured by Bitcoin</span>
           </div>

@@ -35,7 +35,7 @@ function StatTile({ label, value, sub }: { label: string; value: string; sub?: s
   return (
     <div className="bg-zinc-900/70 border border-zinc-800 rounded-2xl p-5 min-w-0">
       <p className="text-zinc-500 text-xs uppercase tracking-widest truncate">{label}</p>
-      <p className="font-display text-2xl md:text-3xl font-bold mt-2 tabular-nums leading-tight">
+      <p className="font-display text-2xl md:text-3xl font-bold mt-2 tabular-nums leading-tight break-all">
         {value}
       </p>
       {sub && <p className="text-zinc-500 text-xs mt-1">{sub}</p>}
