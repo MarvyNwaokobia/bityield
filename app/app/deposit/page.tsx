@@ -51,14 +51,14 @@ const STRATEGY_OPTIONS: StrategyOption[] = [
     riskNote: 'This route is live on Bitcoin mainnet: your deposit is actually supplied into Zest Protocol’s lending pool. It is a new deployment, unaudited, and has had limited real-world testing so far — deposit only a small amount you are comfortable testing with.',
   },
   {
-    id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', status: 'preview',
-    desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY. Live routing is on the roadmap.',
-    riskNote: 'Preview strategy. Hermetica Structured is a BitYield strategy contract paying a fixed 6.2% APY. It models Hermetica but does not route to it yet; the rate is set by the contract, not live market yield.',
-  },
-  {
     id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', status: 'live',
     desc: 'Enrolls your sBTC in the Stacks network’s own Dual Stacking rewards program. A full deposit-and-withdraw round trip is confirmed on mainnet; actual reward payout is still pending its first reward cycle.',
     riskNote: 'This route is live on Bitcoin mainnet: your deposit is actually enrolled in the real Stacks Dual Stacking rewards program, and a full deposit-and-withdraw round trip has been confirmed on-chain. It is a new deployment, unaudited, and reward payout has not been confirmed yet (enrollment activates the following reward cycle, roughly two weeks) — deposit only a small amount you are comfortable testing with.',
+  },
+  {
+    id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', status: 'preview',
+    desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY. Live routing is on the roadmap.',
+    riskNote: 'Preview strategy. Hermetica Structured is a BitYield strategy contract paying a fixed 6.2% APY. It models Hermetica but does not route to it yet; the rate is set by the contract, not live market yield.',
   },
 ];
 
