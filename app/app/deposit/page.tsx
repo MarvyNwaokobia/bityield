@@ -338,12 +338,14 @@ export default function DepositPage() {
                             <div className="space-y-1 pr-4">
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className="font-semibold text-sm">{opt.name}</span>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                              </div>
+                              <div className="flex items-center gap-2 flex-nowrap">
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider whitespace-nowrap ${
                                   opt.risk === 'Low' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
                                 }`}>
                                   {opt.risk} Risk
                                 </span>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border whitespace-nowrap ${
                                   opt.disabled
                                     ? 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20'
                                     : opt.status === 'live'
