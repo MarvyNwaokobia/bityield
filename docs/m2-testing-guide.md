@@ -9,8 +9,11 @@ withdrawal
 both `success`. The Zest route hit a real issue during the first dust test
 (Zest rotated an oracle contract), which was diagnosed, fixed, and redeployed
 as `zest-strategy-live-v2`; see "Zest incident" below for that story. Dual
-Stacking is deployed and registered but not yet dust-tested. See also
-`docs/milestone-2-plan.md` for the full design and evidence.
+Stacking's router plumbing is dust-tested (deposit+withdraw round trip,
+confirmed `success`), and it now holds 0.0001 sBTC and is enrolled in the sBTC
+rewards program, pending the next reward cycle; see "Dual Stacking
+enrollment" below. See also `docs/milestone-2-plan.md` for the full design
+and evidence.
 
 ## Deployed M2 contracts (mainnet)
 
@@ -33,6 +36,8 @@ Post-deploy config (all confirmed success):
 - `add-strategy "dual-stacking"` -> `dual-stacking-strategy-live` (`0x8e853d92…1eff1467`)
 - funded `zest-strategy-live` with 1 STX for Pyth fees (`0x6cbe8e1f…480f22c`); funded
   `zest-strategy-live-v2` likewise (`0xc04d329e…f79f388b60b8ab`)
+- enrolled `dual-stacking-strategy-live` in `sbtc-yield-rewards-v3`
+  (`0x100b7544…349caa36b`) -- see "Dual Stacking enrollment" below
 
 ## Zest incident: oracle rotation, dust loss, redeploy (2026-08-13)
 
@@ -79,6 +84,50 @@ in an immutable contract. Making this fully dynamic requires another
 trait/router interface change (bigger scope than the fix above). Worth deciding
 before scaling past dust amounts, since Zest has now rotated this oracle at
 least once (v1-4 -> v1-6) during this project's lifetime.
+
+## Dual Stacking enrollment (2026-08-13): in progress, pending next reward cycle
+
+Real dust round trip first, same as Zest: deposit + withdraw 10 sats through
+`dual-stacking-strategy-live` via the app, confirmed `success` via the Hiro
+API (deposit `0x1f1678a3…`, withdraw `0x92d8ec03…`, both `(ok ...)` on-chain
+despite the explorer UI showing "Failed" for both -- same known explorer
+quirk as the Zest pair, not a real failure; see "App UI status" below).
+Withdraw returned exactly the deposited amount, as expected: the strategy
+was never enrolled, so there was nothing to earn.
+
+**First `enroll-in-program` attempt reverted: `(err u127)` =
+`ERR_ENROLL_MINIMUM_HOLD_NOT_MET`, from `sbtc-yield-rewards-v3` itself, not a
+bug in our contract.** Root cause: `enroll` checks the caller's *live* sBTC
+balance at call time (`get-balance-available`), not cumulative deposit
+history. The strategy had just round-tripped its dust back out, so it held 0
+sBTC when enrollment was attempted -- below the program's minimum
+(`get-min-hold-for-enrollment` = 10,000 sats / 0.0001 sBTC). No funds were at
+risk; the call simply reverted and only the STX fee was spent.
+
+**Before retrying, verified this route cannot repeat the Zest failure mode.**
+Read the actual deployed `sbtc-yield-rewards-v3.enroll` source: it never
+calls `transfer` or takes custody of anything, only writes a participant
+registration entry against the caller's principal. So the sBTC never leaves
+our strategy contract to enroll. Also re-read sBTC's own `transfer`: unlike
+zsBTC, it has no `is-approved-contract`-style whitelist, only the standard
+SIP-010 sender check -- so `owner-sweep-ft` on `dual-stacking-strategy-live`
+would work as an escape hatch if it were ever needed, which it wasn't here.
+
+**Fix + retry**: funded the test wallet, deposited 10,000 sats via the app
+into Dual Stacking (`0xb1ac8579…a603661`, confirmed via post-conditions +
+API) and left it in (no withdraw). Called `enroll-in-program` from the
+deployer immediately after -- confirmed `success`, `(ok true)`
+(`0x100b7544…349caa36b`).
+
+**Current state**: `dual-stacking-strategy-live` holds 10,000 sats principal,
+enrolled. Enrollment activates the *next* reward cycle (~2 weeks), not
+immediately, so there is nothing to observe yet. **Still open**: whether
+`distribute-rewards` actually credits an enrolled *contract* the same as a
+wallet -- the original Stacks-team question (`docs/outreach-dual-stacking.md`),
+never confirmed by them. This will be settled empirically: after the next
+cycle, check the strategy's sBTC balance for an increase. If rewards land,
+withdraw to prove the full round trip with real yield and capture txids for
+the milestone; if not, that's the trigger to actually send the outreach.
 
 ## Key accounts (mainnet)
 
@@ -175,10 +224,20 @@ least once (v1-4 -> v1-6) during this project's lifetime.
    returns data.
 
 ### Phase 4 — Dual Stacking route
-1. Confirm the Stacks-team dependency first.
-2. Deposit 0.0001 sBTC via the app.
-3. Call `enroll-in-program` (admin) once; verify `is-enrolled-in-next-cycle`.
-4. Rewards begin next cycle and accrue over time (no instant yield).
+**DONE through step 3 as of 2026-08-13** (see "Dual Stacking enrollment"
+above); waiting on step 4-5.
+1. Deposit ≥ 0.0001 sBTC via the app -- and **do not withdraw it**. Enrollment
+   checks the strategy's live balance at call time, not deposit history, so
+   there must be real principal sitting in the contract when you enroll.
+2. Call `enroll-in-program` (admin, deployer key) once the strategy actually
+   holds ≥ the program minimum (`sbtc-yield-rewards-v3.get-min-hold-for-enrollment`,
+   currently 10,000 sats). Verify success and check enrollment status via the
+   rewards contract's read-onlys.
+3. Rewards begin the *next* cycle (~2 weeks) and accrue over time, not
+   instantly. The Stacks-team dependency (does an enrolled contract get
+   credited like a wallet?) is unconfirmed -- treat this cycle as the real
+   test of that, rather than waiting on a reply first.
+4. After a cycle, check the strategy's sBTC balance for an increase.
 5. Withdraw → principal (+ any rewards) returns; position closes. Capture txids.
 
 ### Phase 5 — Verify milestone criteria + evidence
