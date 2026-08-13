@@ -32,6 +32,14 @@ Deployer / owner: `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB` (fresh, isolated).
 | `SP37FXV5….dual-stacking-strategy-live` | `0x8e48dd90…b43744aaa` |
 | `SP37FXV5….hermetica-strategy-live` | `0x5d74f5e1…ac91e73b2` |
 
+For `zest-strategy-live-v2` specifically: `contracts/contracts/zest-strategy-live.clar`
+(no "-v2" suffix) has since drifted ahead to prototype the oracle-dynamic
+redesign below and no longer matches what's deployed. The frozen,
+chain-verified source of what's actually live is
+[`contracts/contracts/zest-strategy-live-v2.clar`](../contracts/contracts/zest-strategy-live-v2.clar),
+pulled verbatim from `api.mainnet.hiro.so` — read that file, not the
+similarly-named one, for ground truth.
+
 Post-deploy config (all confirmed success):
 - `set-sbtc-token` -> `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token` (`0x1c75cd5f…c1a32fb`)
 - `add-strategy "zest"` -> `zest-strategy-live` (`0xcc8a8734…a99eae11`), later repointed to

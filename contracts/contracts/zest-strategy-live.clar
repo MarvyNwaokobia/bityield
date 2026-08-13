@@ -1,5 +1,15 @@
 ;; zest-strategy-live.clar
 ;;
+;; !!! NOT WHAT IS DEPLOYED. THIS FILE IS AHEAD OF MAINNET. !!!
+;; This is the in-progress "oracle-dynamic redesign" prototype (see
+;; docs/m2-testing-guide.md, "Oracle-dynamic redesign" — informally called
+;; zest-strategy-live-v3 there). It has NOT been deployed. The contract that
+;; is actually live on mainnet today, registered on the router as "zest", is
+;; a different (earlier, hardcoded-oracle) version — see the frozen,
+;; chain-verified snapshot at contracts/contracts/zest-strategy-live-v2.clar
+;; for what's really running. Do not treat anything in this file (including
+;; the withdraw signature below) as proof of live behavior.
+;;
 ;; LIVE Zest lending strategy: routes real sBTC into Zest via as-contract.
 ;; Conforms to yield-strategy-trait. References Zest mainnet contracts confirmed
 ;; from real on-chain sBTC supply/withdraw transactions (see docs/milestone-2-plan.md
