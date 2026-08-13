@@ -206,39 +206,55 @@ export default function DocsPage() {
                 <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="font-semibold text-white">Zest</span>
-                    <Pill tone="preview">Live routing rolling out</Pill>
+                    <Pill tone="live">Live</Pill>
                   </div>
                   <p className="text-sm">
                     Lending yield: you supply sBTC, borrowers pay interest, you earn it. Bitcoin in,
-                    Bitcoin out, with no impermanent loss.
+                    Bitcoin out, with no impermanent loss. Deposits are actually supplied into Zest
+                    Protocol&apos;s lending pool on mainnet today.
                   </p>
                 </div>
                 <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <span className="font-semibold text-white">Dual Stacking</span>
-                    <Pill tone="preview">Live routing rolling out</Pill>
+                    <Pill tone="live">Live</Pill>
                   </div>
                   <p className="text-sm">
                     The Stacks network&apos;s own Bitcoin rewards program. Your sBTC is never locked or
-                    moved, and rewards are paid in sBTC.
+                    moved, and rewards are paid in sBTC. Deposits are actually enrolled in the real
+                    program on mainnet today; reward payout follows its normal cycle timing.
                   </p>
                 </div>
                 <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-semibold text-white">Bitflow, Hermetica</span>
+                    <span className="font-semibold text-white">Hermetica</span>
+                    <Pill tone="preview">Preview</Pill>
+                  </div>
+                  <p className="text-sm">
+                    A BitYield strategy contract paying a fixed, transparent APY today, modelling
+                    Hermetica&apos;s structured yield without routing to it yet. Currently unavailable
+                    for new deposits while it is re-registered on the router; live routing to
+                    Hermetica itself is on the roadmap.
+                  </p>
+                </div>
+                <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="font-semibold text-white">Bitflow</span>
                     <Pill tone="soon">Roadmap</Pill>
                   </div>
                   <p className="text-sm">
-                    Trading-fee yield (Bitflow) and a future USD / stablecoin track (Hermetica) are
-                    planned once the first two routes are fully live.
+                    Trading-fee yield, planned as a future route once the live routes above have more
+                    real-world testing behind them.
                   </p>
                 </div>
               </div>
               <Callout tone="warn">
-                <span className="text-zinc-300 font-medium">Current status.</span> Today each route is
-                a BitYield strategy contract that models its target protocol and pays a set rate. Live
-                routing into the underlying protocols is being rolled out and labelled clearly in the
-                app. The route you pick, its rate, and its risks are always shown before you confirm.
+                <span className="text-zinc-300 font-medium">Current status.</span> Zest and Dual
+                Stacking route real sBTC into their live protocols on Bitcoin mainnet today; both are
+                new, unaudited deployments, so rates shown are still indicative rather than a live
+                read of each protocol&apos;s current rate. Hermetica remains a BitYield contract that
+                models its target protocol and pays a set rate, not yet routing live. The route you
+                pick, its rate, and its risks are always shown before you confirm.
               </Callout>
             </Section>
 
@@ -283,12 +299,23 @@ export default function DocsPage() {
               </p>
               <ul className="list-disc pl-5 space-y-2">
                 <li>
-                  Router: <Mono>SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router</Mono>
+                  Router: <Mono>SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.yield-router</Mono>
+                </li>
+                <li>
+                  Zest strategy: <Mono>SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.zest-strategy-live-v2</Mono>
+                </li>
+                <li>
+                  Dual Stacking strategy: <Mono>SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.dual-stacking-strategy-live</Mono>
                 </li>
                 <li>
                   sBTC token: <Mono>SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token</Mono>
                 </li>
               </ul>
+              <p className="text-xs text-zinc-500">
+                The addresses above are the current, live contracts. The Proof page (below) always
+                reads the exact addresses the app is configured against, so it is the authoritative
+                source if this list ever falls behind.
+              </p>
               <p>
                 <Link href="/proof" className="text-bitcoin hover:underline font-medium">
                   Open the Proof page →

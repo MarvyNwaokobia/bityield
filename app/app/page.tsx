@@ -63,9 +63,9 @@ const INFRA = [
   { name: 'sBTC', role: '1:1 Bitcoin-backed asset', live: true },
   { name: 'Leather', role: 'Wallet & connection', live: true },
   { name: 'Hiro', role: 'Stacks API & tooling', live: true },
-  { name: 'Zest Protocol', role: 'BTC lending yield', live: false },
+  { name: 'Zest Protocol', role: 'BTC lending yield', live: true },
+  { name: 'Dual Stacking', role: 'PoX yield', live: true },
   { name: 'Hermetica', role: 'Structured BTC yield', live: false },
-  { name: 'Dual Stacking', role: 'PoX yield', live: false },
 ];
 
 const FAQ: { q: string; a: ReactNode }[] = [
@@ -75,9 +75,7 @@ const FAQ: { q: string; a: ReactNode }[] = [
     q: 'How are the yield rates generated today?',
     a: (
       <>
-        Each strategy is a BitYield smart contract paying a fixed, transparent APY today, clearly
-        labelled “Preview” and fully verifiable on-chain. Next, we route deposits into live
-        protocols, starting with{' '}
+        Two strategies route real sBTC into live protocols today: deposits into{' '}
         <a
           href="https://zestprotocol.com"
           target="_blank"
@@ -86,8 +84,12 @@ const FAQ: { q: string; a: ReactNode }[] = [
         >
           Zest Protocol
         </a>
-        , the largest Bitcoin lending market on Stacks, so your yield comes straight from the
-        market.
+        , the largest Bitcoin lending market on Stacks, are actually supplied into its lending
+        pool, and Dual Stacking enrolls your sBTC in the Stacks network’s own rewards program.
+        Both are new, unaudited deployments, so the rates shown are still indicative rather than
+        a live read of each protocol’s current rate. A third strategy, Hermetica Structured, is a
+        BitYield smart contract paying a fixed, transparent APY today, clearly labelled “Preview”
+        and fully verifiable on-chain, while live routing to Hermetica itself is built.
       </>
     ),
   },

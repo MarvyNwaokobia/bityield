@@ -29,6 +29,7 @@ interface StrategyOption {
   status: RouteStatus;
   desc: string;
   riskNote: string;
+  disabled?: boolean;
 }
 
 // Honest, per-route status: 'live' routes real sBTC into the named protocol on
@@ -45,8 +46,9 @@ const STRATEGY_OPTIONS: StrategyOption[] = [
   },
   {
     id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', status: 'preview',
-    desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY. Live routing is on the roadmap.',
-    riskNote: 'Preview strategy. Hermetica Structured is a BitYield strategy contract paying a fixed 6.2% APY. It models Hermetica but does not route to it yet; the rate is set by the contract, not live market yield.',
+    desc: 'Models Hermetica structured yield with a BitYield strategy contract paying a fixed 6.2% APY. Temporarily unavailable for new deposits while it is re-registered on the current router; live routing to Hermetica itself is on the roadmap.',
+    riskNote: 'Preview strategy, currently unavailable for new deposits. Hermetica Structured is a BitYield strategy contract paying a fixed 6.2% APY. It models Hermetica but does not route to it yet, and is temporarily not registered on the live router — check back shortly.',
+    disabled: true,
   },
   {
     id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', status: 'live',
@@ -283,11 +285,14 @@ export default function DepositPage() {
                         {STRATEGY_OPTIONS.map((opt) => (
                           <div
                             key={opt.id}
-                            onClick={() => setSelectedStrategy(opt.id)}
-                            className={`glow-card border rounded-xl p-4 flex items-center justify-between cursor-pointer transition-all duration-200 ${
-                              selectedStrategy === opt.id
-                                ? 'bg-bitcoin/5 border-bitcoin shadow-[0_0_15px_rgba(247,147,26,0.08)]'
-                                : 'bg-black border-zinc-800 hover:border-zinc-700'
+                            onClick={() => !opt.disabled && setSelectedStrategy(opt.id)}
+                            aria-disabled={opt.disabled}
+                            className={`glow-card border rounded-xl p-4 flex items-center justify-between transition-all duration-200 ${
+                              opt.disabled
+                                ? 'opacity-50 cursor-not-allowed bg-black border-zinc-800'
+                                : selectedStrategy === opt.id
+                                ? 'cursor-pointer bg-bitcoin/5 border-bitcoin shadow-[0_0_15px_rgba(247,147,26,0.08)]'
+                                : 'cursor-pointer bg-black border-zinc-800 hover:border-zinc-700'
                             }`}
                           >
                             <div className="space-y-1 pr-4">
@@ -299,13 +304,15 @@ export default function DepositPage() {
                                   {opt.risk} Risk
                                 </span>
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
-                                  opt.status === 'live'
+                                  opt.disabled
+                                    ? 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20'
+                                    : opt.status === 'live'
                                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                                     : opt.status === 'deployed'
                                     ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                     : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
                                 }`}>
-                                  {opt.status === 'live' ? 'Live' : opt.status === 'deployed' ? 'Deployed' : 'Preview'}
+                                  {opt.disabled ? 'Unavailable' : opt.status === 'live' ? 'Live' : opt.status === 'deployed' ? 'Deployed' : 'Preview'}
                                 </span>
                               </div>
                               <p className="text-xs text-zinc-500 leading-snug">{opt.desc}</p>
@@ -347,7 +354,7 @@ export default function DepositPage() {
 
                     <PrimaryButton
                       onClick={() => setStep('confirm')}
-                      disabled={numericAmount <= 0 || overBalance}
+                      disabled={numericAmount <= 0 || overBalance || selectedStrategyOption.disabled}
                       className="w-full px-6 py-4 text-lg"
                     >
                       Continue
