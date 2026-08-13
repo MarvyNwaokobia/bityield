@@ -37,6 +37,11 @@ interface SubmitOptions {
 // confirmation is usually visible in 30–60s. Give it 90s before timing out.
 const DEFAULT_TIMEOUT_MS = 90_000;
 const POLL_INTERVAL_MS = 2_500;
+// How long to wait for Hiro's API to actually acknowledge the txid before
+// showing the explorer link anyway. Long enough to usually skip past the
+// brief "not indexed yet" window; short enough that a flaky/slow API never
+// leaves the user without a link for more than a few seconds.
+const SEEN_FALLBACK_MS = 8_000;
 
 async function sponsorAndBroadcast(serializedTx: string): Promise<string> {
   const res = await fetch('/api/sponsor-tx', {
@@ -53,7 +58,23 @@ async function sponsorAndBroadcast(serializedTx: string): Promise<string> {
 
 async function pollTxStatus(txid: string, timeoutMs: number, onSeen?: () => void): Promise<TxOutcome> {
   const deadline = Date.now() + timeoutMs;
+  // Normally Hiro's API returns a real response for a broadcast tx within a
+  // poll cycle or two, so waiting for that avoids linking to a txid Hiro
+  // hasn't indexed yet (which its explorer wrongly renders as "Failed").
+  // But if Hiro's API itself is having a bad moment (rate limit, timeout,
+  // any non-ok response or thrown error — this does happen, confirmed by a
+  // real session where a run of requests failed), waiting forever for a
+  // clean response left the user with NO link for the whole flow, which is
+  // worse than the problem being solved. So: reveal it unconditionally after
+  // a short grace period regardless of whether Hiro ever responded cleanly.
+  const seenFallbackAt = Date.now() + SEEN_FALLBACK_MS;
   let seen = false;
+  const markSeen = () => {
+    if (!seen) {
+      seen = true;
+      onSeen?.();
+    }
+  };
 
   while (Date.now() < deadline) {
     try {
@@ -62,13 +83,7 @@ async function pollTxStatus(txid: string, timeoutMs: number, onSeen?: () => void
       // the explorer shows, and we never claim "earning" before it's final.
       const res = await fetch(`${HIRO_API_URL}/extended/v1/tx/${txid}`);
       if (res.ok) {
-        // First response where Hiro's API actually knows about this txid
-        // (vs. a 404 "could not find transaction by ID"). Safe to surface an
-        // explorer link now.
-        if (!seen) {
-          seen = true;
-          onSeen?.();
-        }
+        markSeen();
         const data: { tx_status?: string } = await res.json();
         if (data.tx_status === 'success') return { status: 'success', txid };
         if (data.tx_status && data.tx_status.startsWith('abort_')) {
@@ -78,9 +93,13 @@ async function pollTxStatus(txid: string, timeoutMs: number, onSeen?: () => void
     } catch {
       // Network hiccup — keep polling until the timeout.
     }
+    if (!seen && Date.now() >= seenFallbackAt) markSeen();
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }
 
+  // Timed out without a clean answer either way — still make sure the link
+  // is available so the user isn't left with nothing to check themselves.
+  markSeen();
   return { status: 'timeout' };
 }
 
