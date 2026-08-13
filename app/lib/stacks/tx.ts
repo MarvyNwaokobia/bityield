@@ -21,8 +21,14 @@ export type TxPhase = 'signing' | 'sponsoring' | 'confirming';
 
 interface SubmitOptions {
   onPhase?: (phase: TxPhase) => void;
-  // Fires as soon as the transaction is broadcast and has a txid, so the UI can
-  // show a live explorer link while it confirms.
+  // Fires once Hiro's own indexer has actually picked up the transaction (its
+  // API returns something other than 404 for this txid) — not the instant we
+  // have a bare txid string. Immediately after broadcast, Hiro's API has no
+  // record of the tx yet ("could not find transaction by ID"), and its
+  // explorer website renders that same not-found state as a "Failed" badge
+  // rather than "Pending". Waiting for the first real lookup before handing
+  // the user a link means the explorer page they land on already knows the
+  // tx exists (at minimum "pending"), instead of showing a false Failed.
   onTxId?: (txid: string) => void;
   timeoutMs?: number;
 }
@@ -45,8 +51,9 @@ async function sponsorAndBroadcast(serializedTx: string): Promise<string> {
   return data.txid;
 }
 
-async function pollTxStatus(txid: string, timeoutMs: number): Promise<TxOutcome> {
+async function pollTxStatus(txid: string, timeoutMs: number, onSeen?: () => void): Promise<TxOutcome> {
   const deadline = Date.now() + timeoutMs;
+  let seen = false;
 
   while (Date.now() < deadline) {
     try {
@@ -55,6 +62,13 @@ async function pollTxStatus(txid: string, timeoutMs: number): Promise<TxOutcome>
       // the explorer shows, and we never claim "earning" before it's final.
       const res = await fetch(`${HIRO_API_URL}/extended/v1/tx/${txid}`);
       if (res.ok) {
+        // First response where Hiro's API actually knows about this txid
+        // (vs. a 404 "could not find transaction by ID"). Safe to surface an
+        // explorer link now.
+        if (!seen) {
+          seen = true;
+          onSeen?.();
+        }
         const data: { tx_status?: string } = await res.json();
         if (data.tx_status === 'success') return { status: 'success', txid };
         if (data.tx_status && data.tx_status.startsWith('abort_')) {
@@ -108,9 +122,9 @@ async function submitSponsoredContractCall(
 
   if (!result.transaction) {
     if (result.txid) {
-      onTxId?.(result.txid);
+      const walletTxid = result.txid;
       onPhase?.('confirming');
-      return pollTxStatus(result.txid, timeoutMs);
+      return pollTxStatus(walletTxid, timeoutMs, () => onTxId?.(walletTxid));
     }
     throw new Error('Wallet did not return a signed transaction.');
   }
@@ -118,9 +132,8 @@ async function submitSponsoredContractCall(
   onPhase?.('sponsoring');
   const txid = await sponsorAndBroadcast(result.transaction);
 
-  onTxId?.(txid);
   onPhase?.('confirming');
-  return pollTxStatus(txid, timeoutMs);
+  return pollTxStatus(txid, timeoutMs, () => onTxId?.(txid));
 }
 
 export async function submitDepositTx(
