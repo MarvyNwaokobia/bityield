@@ -32,9 +32,31 @@ export default function DashboardPage() {
 
   const [balanceSats, setBalanceSats] = useState<bigint | null>(null);
   const [balanceError, setBalanceError] = useState(false);
+  const [balanceRetrying, setBalanceRetrying] = useState(false);
   const [positions, setPositions] = useState<Position[] | null>(null);
   const [apy, setApy] = useState<number>(DEFAULT_APY_BPS / 100);
   const [activity, setActivity] = useState<RouterTx[] | null>(null);
+
+  // Retries only the balance read, not the whole dashboard. Retrying via the
+  // full `refresh()` (positions + activity + balance, which itself fans out
+  // into a dozen-plus parallel Hiro calls for positions) meant every click of
+  // the Retry button threw another full burst of requests at an API that was
+  // already rate-limiting us — right after the deposit/withdraw confirmation
+  // poll's own burst (a request every 2.5s for up to 90s) — so repeated
+  // clicks compounded the rate limit instead of recovering from it.
+  const retryBalance = useCallback(async () => {
+    if (!address || balanceRetrying) return;
+    setBalanceRetrying(true);
+    setBalanceError(false);
+    try {
+      setBalanceSats(await getSbtcBalanceSats(address));
+    } catch {
+      setBalanceSats(null);
+      setBalanceError(true);
+    } finally {
+      setBalanceRetrying(false);
+    }
+  }, [address, balanceRetrying]);
 
   const refresh = useCallback(async () => {
     if (!address) return;
@@ -120,11 +142,12 @@ export default function DashboardPage() {
                     <p className="text-zinc-500 text-sm">Available</p>
                     {balanceError ? (
                       <button
-                        onClick={refresh}
-                        className="text-lg font-mono text-amber-400 hover:underline cursor-pointer"
+                        onClick={retryBalance}
+                        disabled={balanceRetrying}
+                        className="text-lg font-mono text-amber-400 hover:underline cursor-pointer disabled:opacity-60 disabled:no-underline disabled:cursor-default"
                         title="We couldn't load your balance. Your sBTC is safe. Tap to retry."
                       >
-                        Retry
+                        {balanceRetrying ? 'Retrying…' : 'Retry'}
                       </button>
                     ) : (
                       <p className="text-lg font-mono">
