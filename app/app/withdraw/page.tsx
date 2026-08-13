@@ -278,6 +278,7 @@ function WithdrawPageInner() {
                   description={`${formatBtc(withdrawnTotalSats)} BTC has been sent back to your wallet on Bitcoin L1.`}
                   onDone={() => router.push('/dashboard')}
                   doneLabel="View dashboard"
+                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
                 >
                   <div className="bg-black border border-zinc-800 rounded-xl p-6 mb-8">
                     <p className="text-zinc-500 text-sm">
@@ -302,6 +303,7 @@ function WithdrawPageInner() {
                     setStep('select');
                   }}
                   onRetry={() => setStep('confirm')}
+                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
                 />
               </motion.div>
             )}

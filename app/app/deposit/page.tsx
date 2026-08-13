@@ -575,6 +575,7 @@ export default function DepositPage() {
                   description={`${formatApyPercent(apy)} APY on ${satsToBtc(BigInt(depositedSats)).toFixed(8)} BTC with ${selectedStrategyOption.name}, paid in Bitcoin.`}
                   onDone={() => router.push('/dashboard')}
                   doneLabel="View dashboard"
+                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
                 >
                   <div className="bg-black border border-zinc-800 rounded-xl p-6 mb-8 text-center sm:text-left">
                     <p className="text-zinc-500 text-sm uppercase tracking-widest mb-2">
@@ -602,6 +603,7 @@ export default function DepositPage() {
                   }
                   onCancel={() => setStep('amount')}
                   onRetry={() => setStep('confirm')}
+                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
                 />
               </motion.div>
             )}

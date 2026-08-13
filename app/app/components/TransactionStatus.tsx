@@ -137,12 +137,14 @@ export function SuccessCard({
   children,
   onDone,
   doneLabel = 'Done',
+  explorerUrl,
 }: {
   title: string;
   description: ReactNode;
   children?: ReactNode;
   onDone: () => void;
   doneLabel?: string;
+  explorerUrl?: string;
 }) {
   return (
     <motion.div
@@ -169,6 +171,18 @@ export function SuccessCard({
           {description}
         </motion.p>
         {children && <motion.div variants={fadeSlideUp}>{children}</motion.div>}
+        {explorerUrl && (
+          <motion.div variants={fadeSlideUp} className="mb-6">
+            <a
+              href={explorerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-bitcoin/90 hover:text-bitcoin hover:underline"
+            >
+              View on the explorer ↗
+            </a>
+          </motion.div>
+        )}
         <motion.div variants={fadeSlideUp}>
           <PrimaryButton onClick={onDone} className="w-full px-6 py-4">
             {doneLabel}
@@ -186,6 +200,7 @@ export function ErrorCard({
   onRetry,
   cancelLabel = 'Cancel',
   retryLabel = 'Try Again',
+  explorerUrl,
 }: {
   title: string;
   description: ReactNode;
@@ -193,6 +208,7 @@ export function ErrorCard({
   onRetry: () => void;
   cancelLabel?: string;
   retryLabel?: string;
+  explorerUrl?: string;
 }) {
   const reducedMotion = useReducedMotion();
 
@@ -209,7 +225,19 @@ export function ErrorCard({
         </div>
       </div>
       <p className="font-display text-xl font-semibold mb-2">{title}</p>
-      <p className="text-zinc-400 mb-8 leading-relaxed">{description}</p>
+      <p className="text-zinc-400 mb-6 leading-relaxed">{description}</p>
+      {explorerUrl && (
+        <p className="mb-6">
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-bitcoin/90 hover:text-bitcoin hover:underline"
+          >
+            View this transaction on the explorer ↗
+          </a>
+        </p>
+      )}
       <div className="flex gap-3">
         <SecondaryButton onClick={onCancel} className="flex-1 px-6 py-4">
           {cancelLabel}
