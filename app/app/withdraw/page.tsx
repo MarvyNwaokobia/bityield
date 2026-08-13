@@ -9,7 +9,7 @@ import { useWallet } from '@/lib/stacks/wallet';
 import { getPositions, type Position } from '@/lib/stacks/contract';
 import { submitWithdrawTx, type TxPhase } from '@/lib/stacks/tx';
 import { type StrategyName, explorerTxUrl } from '@/lib/stacks/network';
-import { formatBtc, satsToBtc } from '@/lib/stacks/format';
+import { formatBtc, satsToBtc, formatApyPercent } from '@/lib/stacks/format';
 import { fadeSlideUp, hoverScale, springTransition, staggerContainer } from '@/lib/motion';
 import { ConnectPrompt } from '../components/ConnectPrompt';
 import { ErrorCard, PendingCard, SuccessCard } from '../components/TransactionStatus';
@@ -84,7 +84,7 @@ function WithdrawPageInner() {
   };
 
   const totalSats = selected ? selected.amountSats + selected.accruedYieldSats : 0n;
-  const apy = selected ? selected.apyBps / 100 : 0;
+  const apy = selected ? selected.displayApyPercent : 0;
 
   return (
     <div className="bg-[#0a0a0a] text-white min-h-screen flex flex-col">
@@ -178,7 +178,7 @@ function WithdrawPageInner() {
                         </p>
                         <p className="text-zinc-500 text-sm mt-1">
                           {formatBtc(p.amountSats)} BTC principal + {formatBtc(p.accruedYieldSats)} BTC
-                          earned · {p.apyBps / 100}% APY
+                          earned · {formatApyPercent(p.displayApyPercent)} APY
                         </p>
                       </div>
                       <PrimaryButton
@@ -239,7 +239,7 @@ function WithdrawPageInner() {
                   </motion.div>
                   <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
                     <span className="text-zinc-400">APY</span>
-                    <span>{apy}%, paid in Bitcoin</span>
+                    <span>{formatApyPercent(apy)}, paid in Bitcoin</span>
                   </motion.div>
                 </motion.div>
 

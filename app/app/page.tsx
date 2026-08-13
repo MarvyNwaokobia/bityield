@@ -10,7 +10,8 @@ import { PrimaryLinkButton } from './components/Button';
 import { WaitlistForm } from './components/WaitlistForm';
 import { fadeSlideUp, staggerContainer } from '@/lib/motion';
 import { fetchRouterStats, type RouterStats } from '@/lib/stacks/analytics';
-import { satsToBtc } from '@/lib/stacks/format';
+import { getLiveApyPercent } from '@/lib/stacks/contract';
+import { satsToBtc, formatApyPercent } from '@/lib/stacks/format';
 
 // ─── Icons (SVG, no emoji) ────────────────────────────────────────────────────
 
@@ -86,10 +87,12 @@ const FAQ: { q: string; a: ReactNode }[] = [
         </a>
         , the largest Bitcoin lending market on Stacks, are actually supplied into its lending
         pool, and Dual Stacking enrolls your sBTC in the Stacks network’s own rewards program.
-        Both are new, unaudited deployments, so the rates shown are still indicative rather than
-        a live read of each protocol’s current rate. A third strategy, Hermetica Structured, is a
-        BitYield smart contract paying a fixed, transparent APY today, clearly labelled “Preview”
-        and fully verifiable on-chain, while live routing to Hermetica itself is built.
+        Both are new, unaudited deployments, and both rates are read live from each protocol,
+        not a fixed BitYield number — a live rate moves with real market conditions and can be
+        small (Zest’s reflects real borrowing demand, for example). A third strategy, Hermetica
+        Structured, is a BitYield smart contract paying a fixed, transparent APY today, clearly
+        labelled “Preview” and fully verifiable on-chain, while live routing to Hermetica itself
+        is built.
       </>
     ),
   },
@@ -116,8 +119,16 @@ function LivePill() {
   );
 }
 
-// Product mockup shown in the hero. Mirrors the real dashboard.
+// Product mockup shown in the hero. Mirrors the real dashboard, including
+// pulling Zest's live rate — same source /deposit reads — rather than a
+// hardcoded number that would drift out of sync with the real app.
 function AppPreview() {
+  const [zestApy, setZestApy] = useState<number | null>(null);
+  useEffect(() => {
+    getLiveApyPercent('zest').then(setZestApy).catch(() => {});
+  }, []);
+  const apyLabel = zestApy !== null ? `${formatApyPercent(zestApy)} APY` : 'Live APY';
+
   return (
     <div className="relative motion-safe:animate-floaty">
       <div aria-hidden className="absolute -inset-6 rounded-4xl bg-bitcoin/20 blur-3xl" />
@@ -130,7 +141,7 @@ function AppPreview() {
         </div>
         <p className="text-zinc-500 text-xs mb-1">Total balance</p>
         <p className="font-display text-4xl font-bold tracking-tight tabular-nums">0.50000000</p>
-        <p className="text-bitcoin text-sm mt-1 tabular-nums">+0.00000112 BTC · 4.5% APY</p>
+        <p className="text-bitcoin text-sm mt-1 tabular-nums">+0.00000112 BTC · {apyLabel}</p>
 
         <div className="mt-6 rounded-2xl border border-zinc-800 bg-black/40 p-4">
           <div className="flex items-center justify-between">
@@ -141,7 +152,7 @@ function AppPreview() {
               <p className="font-display text-lg font-bold mt-2 tabular-nums">0.30000000 BTC</p>
               <p className="text-zinc-500 text-xs">principal + yield</p>
             </div>
-            <span className="text-bitcoin font-display font-bold text-sm">4.5% APY</span>
+            <span className="text-bitcoin font-display font-bold text-sm">{apyLabel}</span>
           </div>
         </div>
 

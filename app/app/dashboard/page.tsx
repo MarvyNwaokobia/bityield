@@ -6,8 +6,8 @@ import { Logo } from '../components/Logo';
 import { motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
 import { getSbtcBalanceSats } from '@/lib/stacks/balances';
-import { DEFAULT_APY_BPS, getBestRate, getPositions, type Position } from '@/lib/stacks/contract';
-import { formatBtc, satsToBtc } from '@/lib/stacks/format';
+import { DEFAULT_APY_BPS, getBestLiveApyPercent, getPositions, type Position } from '@/lib/stacks/contract';
+import { formatBtc, satsToBtc, formatApyPercent } from '@/lib/stacks/format';
 import { fadeSlideUp, hoverScale, springTransition, staggerContainer } from '@/lib/motion';
 import { fetchUserActivity, type RouterTx } from '@/lib/stacks/analytics';
 import { explorerTxUrl } from '@/lib/stacks/network';
@@ -33,7 +33,7 @@ export default function DashboardPage() {
   const [balanceSats, setBalanceSats] = useState<bigint | null>(null);
   const [balanceError, setBalanceError] = useState(false);
   const [positions, setPositions] = useState<Position[] | null>(null);
-  const [apyBps, setApyBps] = useState<number>(DEFAULT_APY_BPS);
+  const [apy, setApy] = useState<number>(DEFAULT_APY_BPS / 100);
   const [activity, setActivity] = useState<RouterTx[] | null>(null);
 
   const refresh = useCallback(async () => {
@@ -62,10 +62,9 @@ export default function DashboardPage() {
   }, [refresh]);
 
   useEffect(() => {
-    getBestRate().then((rate) => setApyBps(rate.apyBps));
+    getBestLiveApyPercent().then(setApy);
   }, []);
 
-  const apy = apyBps / 100;
   const earningSats = (positions ?? []).reduce(
     (sum, p) => sum + p.amountSats + p.accruedYieldSats,
     0n
@@ -148,7 +147,7 @@ export default function DashboardPage() {
                       <span className="absolute inline-flex h-full w-full rounded-full bg-bitcoin motion-safe:animate-ping opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-bitcoin" />
                     </span>
-                    +{formatBtc(accruedYieldSats)} BTC earned so far at {apy}% APY, paid in Bitcoin.
+                    +{formatBtc(accruedYieldSats)} BTC earned so far, paid in Bitcoin.
                   </p>
                 )}
 
@@ -170,8 +169,9 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-xl font-semibold mb-2">Nothing earning yet</p>
                   <p className="text-zinc-400 leading-relaxed">
-                    Deposit Bitcoin to start earning {apy}% APY, paid in Bitcoin. Your Bitcoin
-                    stays on Bitcoin L1 under your own keys.
+                    Deposit Bitcoin to start earning, paid in Bitcoin — up to {formatApyPercent(apy)}{' '}
+                    APY across live routes today. Your Bitcoin stays on Bitcoin L1 under your own
+                    keys.
                   </p>
                 </motion.div>
               )}
@@ -226,7 +226,7 @@ export default function DashboardPage() {
                           </p>
                           <p className="text-zinc-500 text-sm mt-1">
                             {formatBtc(p.amountSats)} BTC principal + {formatBtc(p.accruedYieldSats)}{' '}
-                            BTC earned · {p.apyBps / 100}% APY
+                            BTC earned · {formatApyPercent(p.displayApyPercent)} APY
                           </p>
                         </div>
                         <SecondaryLinkButton

@@ -3,60 +3,10 @@ import { fetchCallReadOnlyFunction } from '@stacks/transactions';
 import { network, YIELD_ROUTER, HIRO_API_URL, STRATEGIES, type StrategyName } from './network';
 import { CT, cvType } from './clarity-runtime';
 
-export const DEFAULT_APY_BPS = 500; // 5.00% — matches the contract's default and the landing page.
-
-export interface RateInfo {
-  strategy: string;
-  apyBps: number;
-  tvlSats: bigint;
-}
-
-const DEFAULT_RATE: RateInfo = { strategy: 'mock-yield', apyBps: DEFAULT_APY_BPS, tvlSats: 0n };
+export const DEFAULT_APY_BPS = 500; // 5.00% — fallback when no live rate is readable.
 
 function asUint(value: UIntCV): bigint {
   return BigInt(value.value);
-}
-
-/**
- * Reads YieldRouter's current rate. Falls back to the contract's default (5%)
- * if NEXT_PUBLIC_YIELD_ROUTER_ADDRESS is unset or the read fails, so the UI
- * stays usable before the contract is deployed.
- */
-export async function getBestRate(): Promise<RateInfo> {
-  if (!YIELD_ROUTER) return DEFAULT_RATE;
-
-  try {
-    const result = await fetchCallReadOnlyFunction({
-      contractAddress: YIELD_ROUTER.address,
-      contractName: YIELD_ROUTER.name,
-      functionName: 'get-best-rate',
-      functionArgs: [],
-      senderAddress: YIELD_ROUTER.address,
-      network,
-    });
-
-    if (cvType(result) === CT.tuple) {
-      const value = (result as TupleCV).value;
-      const strategy = value.strategy;
-      const apyBps = value['apy-bps'];
-      const tvl = value.tvl;
-      if (
-        cvType(strategy) === CT.ascii &&
-        cvType(apyBps) === CT.uint &&
-        cvType(tvl) === CT.uint
-      ) {
-        return {
-          strategy: (strategy as { value: string }).value,
-          apyBps: Number(asUint(apyBps as UIntCV)),
-          tvlSats: asUint(tvl as UIntCV),
-        };
-      }
-    }
-  } catch {
-    // Contract not deployed/reachable yet — fall back to the default rate.
-  }
-
-  return DEFAULT_RATE;
 }
 
 /**
@@ -97,6 +47,24 @@ export async function getLiveApyPercent(name: StrategyName): Promise<number | nu
   }
 }
 
+/**
+ * The best currently-available live rate across the routes we can read live
+ * (Zest, Dual Stacking), as a display percent. The router's own
+ * `get-best-rate` is a separate admin-set cache that was never wired up to
+ * these live routes (it still reports its "mock-yield" default), so it is
+ * not a live source and isn't used here — this reads the real strategies
+ * directly instead. Falls back to the 5% contract default if both live
+ * reads fail.
+ */
+export async function getBestLiveApyPercent(): Promise<number> {
+  const [zest, dualStacking] = await Promise.all([
+    getLiveApyPercent('zest'),
+    getLiveApyPercent('dual-stacking'),
+  ]);
+  const rates = [zest, dualStacking].filter((r): r is number => r !== null);
+  return rates.length > 0 ? Math.max(...rates) : DEFAULT_APY_BPS / 100;
+}
+
 export interface Position {
   id: number;
   amountSats: bigint;
@@ -105,6 +73,17 @@ export interface Position {
   strategy: string;
   /** True when accruedYieldSats was read from the live protocol instead of the router's fixed-APY estimate. */
   yieldIsLive: boolean;
+  /**
+   * The rate to actually display, as a percent. For Zest/Dual Stacking this
+   * is the current live rate, not `apyBps / 100` — the router stores
+   * whatever `get-apy` returned *at deposit time* directly as "apy-bps"
+   * with no per-strategy unit conversion, so for Zest specifically that
+   * field holds its raw internal rate mislabeled as basis points (off by a
+   * factor of ~10,000 from a true percent). Falls back to `apyBps / 100`
+   * for strategies with no live-verified conversion (Hermetica/mock-yield),
+   * where that field is the real, correctly-scaled bps value.
+   */
+  displayApyPercent: number;
 }
 
 // Strategies that actually route sBTC into an external live protocol (Zest's
@@ -193,19 +172,24 @@ export async function getPositions(address: string): Promise<Position[]> {
     const liveStrategyNames = [...new Set(open.map((p) => p.strategy))].filter(
       (s): s is StrategyName => LIVE_PROTOCOL_STRATEGIES.has(s)
     );
-    const liveTotalsEntries = await Promise.all(
-      liveStrategyNames.map(async (s) => [s, await fetchLiveStrategyTotals(s)] as const)
-    );
+    const [liveTotalsEntries, liveApyEntries] = await Promise.all([
+      Promise.all(liveStrategyNames.map(async (s) => [s, await fetchLiveStrategyTotals(s)] as const)),
+      Promise.all(liveStrategyNames.map(async (s) => [s, await getLiveApyPercent(s)] as const)),
+    ]);
     const liveTotals = new Map(liveTotalsEntries);
+    const liveApy = new Map(liveApyEntries);
 
     return open.map((p) => {
+      const apyPercent = liveApy.get(p.strategy as StrategyName);
+      const displayApyPercent = apyPercent ?? p.apyBps / 100;
+
       const totals = liveTotals.get(p.strategy as StrategyName);
-      if (!totals || totals.totalPrincipalSats === 0n) return { ...p, yieldIsLive: false };
+      if (!totals || totals.totalPrincipalSats === 0n) return { ...p, yieldIsLive: false, displayApyPercent };
       const live =
         totals.totalValueSats > totals.totalPrincipalSats
           ? (p.amountSats * (totals.totalValueSats - totals.totalPrincipalSats)) / totals.totalPrincipalSats
           : 0n;
-      return { ...p, accruedYieldSats: live, yieldIsLive: true };
+      return { ...p, accruedYieldSats: live, yieldIsLive: true, displayApyPercent };
     });
   } catch {
     return [];
@@ -261,13 +245,15 @@ async function getPosition(address: string, id: number): Promise<RawPosition | n
     return null;
   }
 
+  const apyBpsValue = Number(asUint(apyBps as UIntCV));
   return {
     id,
     amountSats: asUint(amount as UIntCV),
     accruedYieldSats: asUint(accruedYield as UIntCV),
-    apyBps: Number(asUint(apyBps as UIntCV)),
+    apyBps: apyBpsValue,
     strategy: (strategy as { value: string }).value,
     yieldIsLive: false,
+    displayApyPercent: apyBpsValue / 100,
     closed: cvType(closed) === CT.true,
   };
 }
