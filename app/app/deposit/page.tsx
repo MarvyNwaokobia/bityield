@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
 import { getSbtcBalanceSats } from '@/lib/stacks/balances';
+import { getLiveApyPercent } from '@/lib/stacks/contract';
 import { submitDepositTx, type TxPhase } from '@/lib/stacks/tx';
-import { satsToBtc, SATS_PER_BTC } from '@/lib/stacks/format';
+import { satsToBtc, SATS_PER_BTC, formatApyPercent } from '@/lib/stacks/format';
 import { fadeSlideUp, staggerContainer } from '@/lib/motion';
 import { Logo } from '../components/Logo';
 import { ConnectPrompt } from '../components/ConnectPrompt';
@@ -38,10 +39,15 @@ interface StrategyOption {
 // BitYield's own strategy contract paying a fixed, admin-set APY, modelling
 // the target protocol without routing to it. See the Risk & disclosures panel
 // on confirm for the route-specific detail.
+//
+// `apy` below is the fallback shown before/if the live read (see
+// `getLiveApyPercent`) resolves — Zest and Dual Stacking both replace it with
+// the real on-chain rate once loaded, since both now have a verified
+// conversion from the strategy's raw `get-apy`.
 const STRATEGY_OPTIONS: StrategyOption[] = [
   {
     id: 'zest', name: 'Zest Lending', apy: 4.5, targetProtocol: 'Zest Protocol', risk: 'Low', status: 'live',
-    desc: 'Routes your sBTC into real Zest Protocol lending on Bitcoin mainnet. The rate shown is indicative, not yet a live read of Zest’s current rate.',
+    desc: 'Routes your sBTC into real Zest Protocol lending on Bitcoin mainnet. The rate shown is read live from Zest’s sBTC reserve.',
     riskNote: 'This route is live on Bitcoin mainnet: your deposit is actually supplied into Zest Protocol’s lending pool. It is a new deployment, unaudited, and has had limited real-world testing so far — deposit only a small amount you are comfortable testing with.',
   },
   {
@@ -56,6 +62,20 @@ const STRATEGY_OPTIONS: StrategyOption[] = [
   },
 ];
 
+// Where a user can read about the underlying protocol itself, not just
+// BitYield's summary of it.
+const PROTOCOL_LINKS: Partial<Record<StrategyName, string>> = {
+  zest: 'https://www.zestprotocol.com/',
+  'dual-stacking': 'https://docs.stacks.co/dual-stacking',
+};
+
+// Below this, Zest's live rate reads as "0.0%" (rounding), which looks broken
+// rather than honest. Zest's sBTC reserve currently has borrowing disabled /
+// near-zero utilization, so the true supply APY really is close to zero —
+// this note is what makes that legible instead of looking like a bug.
+const ZEST_NEAR_ZERO_NOTE =
+  'Zest’s sBTC reserve currently has very low borrowing demand, so the real supply rate is near zero. This is the true live rate, not a display error — it moves with Zest’s own market conditions.';
+
 export default function DepositPage() {
   const { address, isConnected } = useWallet();
   const router = useRouter();
@@ -69,6 +89,26 @@ export default function DepositPage() {
   const [txid, setTxid] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [depositedSats, setDepositedSats] = useState(0);
+  const [liveApyPercent, setLiveApyPercent] = useState<Partial<Record<StrategyName, number>>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const [zest, dualStacking] = await Promise.all([
+        getLiveApyPercent('zest'),
+        getLiveApyPercent('dual-stacking'),
+      ]);
+      if (cancelled) return;
+      setLiveApyPercent((prev) => ({
+        ...prev,
+        ...(zest !== null ? { zest } : {}),
+        ...(dualStacking !== null ? { 'dual-stacking': dualStacking } : {}),
+      }));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const refreshBalance = useCallback(async () => {
     if (!address) return;
@@ -91,7 +131,8 @@ export default function DepositPage() {
   }, [isConnected, refreshBalance]);
 
   const selectedStrategyOption = STRATEGY_OPTIONS.find((s) => s.id === selectedStrategy)!;
-  const apy = selectedStrategyOption.apy;
+  const apy = liveApyPercent[selectedStrategy] ?? selectedStrategyOption.apy;
+  const apyIsLive = liveApyPercent[selectedStrategy] !== undefined;
 
   const balanceBtc = balanceSats !== null ? satsToBtc(balanceSats) : 0;
   const numericAmount = Math.min(Math.max(Number(amount) || 0, 0), balanceBtc);
@@ -315,21 +356,40 @@ export default function DepositPage() {
                                 </span>
                               </div>
                               <p className="text-xs text-zinc-500 leading-snug">{opt.desc}</p>
-                              {strategyContractId(opt.id) && (
-                                <a
-                                  href={explorerContractUrl(strategyContractId(opt.id)!)}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={(e) => e.stopPropagation()}
-                                  className="inline-block text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline"
-                                >
-                                  Verify contract on-chain ↗
-                                </a>
+                              {liveApyPercent[opt.id] !== undefined && liveApyPercent[opt.id]! < 0.01 && (
+                                <p className="text-[11px] text-amber-400/90 leading-snug">{ZEST_NEAR_ZERO_NOTE}</p>
                               )}
+                              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
+                                {strategyContractId(opt.id) && (
+                                  <a
+                                    href={explorerContractUrl(strategyContractId(opt.id)!)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-block text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline"
+                                  >
+                                    Verify contract on-chain ↗
+                                  </a>
+                                )}
+                                {PROTOCOL_LINKS[opt.id] && (
+                                  <a
+                                    href={PROTOCOL_LINKS[opt.id]}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="inline-block text-[11px] text-zinc-500 hover:text-zinc-300 hover:underline"
+                                  >
+                                    About {opt.targetProtocol} ↗
+                                  </a>
+                                )}
+                              </div>
                             </div>
                             <div className="text-right">
-                              <span className="font-display text-lg font-bold text-bitcoin whitespace-nowrap">{opt.apy}% APY</span>
+                              <span className="font-display text-lg font-bold text-bitcoin whitespace-nowrap">
+                                {formatApyPercent(liveApyPercent[opt.id] ?? opt.apy)} APY
+                              </span>
                               <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                                {liveApyPercent[opt.id] !== undefined ? 'Live rate · ' : ''}
                                 {opt.status === 'preview' ? 'Models' : 'Routes to'} {opt.targetProtocol}
                               </p>
                             </div>
@@ -395,7 +455,9 @@ export default function DepositPage() {
                   </motion.div>
                   <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
                     <span className="text-zinc-400">Yield rate</span>
-                    <span className="text-bitcoin font-semibold">{apy}% APY, paid in Bitcoin</span>
+                    <span className="text-bitcoin font-semibold">
+                      {formatApyPercent(apy)} APY{apyIsLive ? ' (live)' : ''}, paid in Bitcoin
+                    </span>
                   </motion.div>
                   <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
                     <span className="text-zinc-400">Est. monthly earnings</span>
@@ -472,6 +534,16 @@ export default function DepositPage() {
                         Verify router contract ↗
                       </a>
                     )}
+                    {PROTOCOL_LINKS[selectedStrategy] && (
+                      <a
+                        href={PROTOCOL_LINKS[selectedStrategy]}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] text-zinc-500 hover:text-zinc-300 hover:underline"
+                      >
+                        About {selectedStrategyOption.targetProtocol} ↗
+                      </a>
+                    )}
                   </div>
                 </div>
 
@@ -491,7 +563,7 @@ export default function DepositPage() {
                 <PendingCard
                   phase={phase}
                   explorerUrl={txid ? explorerTxUrl(txid) : undefined}
-                  footer={`${numericAmount.toFixed(8)} BTC → earning ${apy}% APY on ${selectedStrategyOption.name}`}
+                  footer={`${numericAmount.toFixed(8)} BTC → earning ${formatApyPercent(apy)} APY on ${selectedStrategyOption.name}`}
                 />
               </motion.div>
             )}
@@ -500,7 +572,7 @@ export default function DepositPage() {
               <motion.div key="success" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
                 <SuccessCard
                   title="You're now earning"
-                  description={`${apy}% APY on ${satsToBtc(BigInt(depositedSats)).toFixed(8)} BTC with ${selectedStrategyOption.name}, paid in Bitcoin.`}
+                  description={`${formatApyPercent(apy)} APY on ${satsToBtc(BigInt(depositedSats)).toFixed(8)} BTC with ${selectedStrategyOption.name}, paid in Bitcoin.`}
                   onDone={() => router.push('/dashboard')}
                   doneLabel="View dashboard"
                 >

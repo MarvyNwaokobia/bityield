@@ -213,6 +213,25 @@ export default function DocsPage() {
                     Bitcoin out, with no impermanent loss. Deposits are actually supplied into Zest
                     Protocol&apos;s lending pool on mainnet today.
                   </p>
+                  <p className="text-sm mt-2">
+                    Mechanically: BitYield supplies your sBTC into Zest&apos;s Bitcoin lending pool and
+                    receives <span className="text-zinc-300 font-medium">zsBTC</span>{' '}
+                    in return, an
+                    interest-bearing receipt token whose balance grows as borrowers repay interest.
+                    You never handle zsBTC directly, BitYield holds it on your behalf and redeems it
+                    back to sBTC when you withdraw. The rate on the deposit screen is read live from
+                    Zest&apos;s own sBTC reserve, so it moves with real borrowing demand, and can sit
+                    near zero when that demand is low, exactly as it would if you supplied directly
+                    on Zest.
+                  </p>
+                  <a
+                    href="https://www.zestprotocol.com/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-xs text-bitcoin/80 hover:text-bitcoin hover:underline mt-2"
+                  >
+                    About Zest Protocol ↗
+                  </a>
                 </div>
                 <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -224,6 +243,23 @@ export default function DocsPage() {
                     moved, and rewards are paid in sBTC. Deposits are actually enrolled in the real
                     program on mainnet today; reward payout follows its normal cycle timing.
                   </p>
+                  <p className="text-sm mt-2">
+                    Mechanically: once your sBTC is deposited, BitYield enrolls the position in
+                    Stacks&apos; native Proof-of-Transfer rewards program. There is nothing for you to
+                    actively manage — the program pays BTC-denominated rewards directly to the
+                    position on its normal cycle (roughly every two weeks), calculated by the
+                    protocol itself, not by BitYield. The base rate (around 0.5% on sBTC alone) is
+                    read live from the program; it can rise toward roughly 5% for positions that also
+                    stack STX, a boost BitYield does not yet offer.
+                  </p>
+                  <a
+                    href="https://docs.stacks.co/dual-stacking"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block text-xs text-bitcoin/80 hover:text-bitcoin hover:underline mt-2"
+                  >
+                    About Dual Stacking ↗
+                  </a>
                 </div>
                 <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4">
                   <div className="flex items-center gap-2 flex-wrap mb-1">
@@ -249,9 +285,12 @@ export default function DocsPage() {
               </div>
               <Callout tone="warn">
                 <span className="text-zinc-300 font-medium">Current status.</span> Zest and Dual
-                Stacking route real sBTC into their live protocols on Bitcoin mainnet today; both are
-                new, unaudited deployments, so rates shown are still indicative rather than a live
-                read of each protocol&apos;s current rate. Hermetica remains a BitYield contract that
+                Stacking route real sBTC into their live protocols on Bitcoin mainnet today, and their
+                rates on the deposit screen are read live from each protocol, not a fixed BitYield
+                number. Both are new, unaudited deployments. A live rate can be small or move with
+                the underlying protocol&apos;s own conditions (for example, Zest&apos;s rate reflects
+                real borrowing demand and can sit near zero when that demand is low) — that is the
+                real market rate, not a display error. Hermetica remains a BitYield contract that
                 models its target protocol and pays a set rate, not yet routing live. The route you
                 pick, its rate, and its risks are always shown before you confirm.
               </Callout>

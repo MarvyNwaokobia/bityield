@@ -59,6 +59,44 @@ export async function getBestRate(): Promise<RateInfo> {
   return DEFAULT_RATE;
 }
 
+/**
+ * Reads a strategy's live APY as a display percent (e.g. 4.5 means 4.5%).
+ * `get-apy` is encoded differently per strategy (see each contract's own
+ * comment), so the conversion is strategy-specific, not generic:
+ *
+ * - Zest: returns its raw internal current-liquidity-rate — annualized,
+ *   1e8-fixed-point (verified against the deployed `math-v2-0.get-one()` =
+ *   u100000000 = 100%, and cross-checked: the same reserve's
+ *   current-variable-borrow-rate of 5001121 converts to a plausible 5.001%
+ *   borrow APY under this formula). percent = raw / 1,000,000.
+ * - Dual Stacking: returns its stored base rate directly in basis points
+ *   (DUAL-BASE-APR-BPS). percent = raw / 100.
+ *
+ * Returns null if the strategy isn't configured, has no live-verified
+ * conversion (Hermetica/mock-yield), or the read fails.
+ */
+export async function getLiveApyPercent(name: StrategyName): Promise<number | null> {
+  if (name !== 'zest' && name !== 'dual-stacking') return null;
+  const ref = STRATEGIES[name];
+  if (!ref) return null;
+  try {
+    const result = await fetchCallReadOnlyFunction({
+      contractAddress: ref.address,
+      contractName: ref.name,
+      functionName: 'get-apy',
+      functionArgs: [],
+      senderAddress: ref.address,
+      network,
+    });
+    const inner = cvType(result) === CT.ok ? (result as { value: unknown }).value : result;
+    if (cvType(inner) !== CT.uint) return null;
+    const raw = asUint(inner as UIntCV);
+    return name === 'zest' ? Number(raw) / 1_000_000 : Number(raw) / 100;
+  } catch {
+    return null;
+  }
+}
+
 export interface Position {
   id: number;
   amountSats: bigint;
