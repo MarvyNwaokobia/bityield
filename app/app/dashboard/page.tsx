@@ -201,6 +201,21 @@ export default function DashboardPage() {
                             <span className="text-[9px] px-2.5 py-0.5 rounded-full font-bold bg-bitcoin/10 text-bitcoin border border-bitcoin/20 uppercase tracking-wider">
                               {getStrategyDisplayName(p.strategy)}
                             </span>
+                            {p.yieldIsLive ? (
+                              <span
+                                title="Earned amount read directly from the protocol's on-chain balance, not estimated."
+                                className="text-[9px] px-2.5 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider"
+                              >
+                                Live from protocol
+                              </span>
+                            ) : (
+                              <span
+                                title="Earned amount is a projection from the strategy's fixed APY, not yet a live read of accrued yield."
+                                className="text-[9px] px-2.5 py-0.5 rounded-full font-bold bg-zinc-500/10 text-zinc-400 border border-zinc-500/20 uppercase tracking-wider"
+                              >
+                                Estimated
+                              </span>
+                            )}
                           </div>
                           <p className="font-display text-2xl font-bold">
                             <AnimatedNumber

@@ -1,6 +1,6 @@
-import { uintCV, principalCV, type TupleCV, type UIntCV } from '@stacks/transactions';
+import { uintCV, principalCV, hexToCV, type TupleCV, type UIntCV } from '@stacks/transactions';
 import { fetchCallReadOnlyFunction } from '@stacks/transactions';
-import { network, YIELD_ROUTER } from './network';
+import { network, YIELD_ROUTER, HIRO_API_URL, STRATEGIES, type StrategyName } from './network';
 import { CT, cvType } from './clarity-runtime';
 
 export const DEFAULT_APY_BPS = 500; // 5.00% — matches the contract's default and the landing page.
@@ -65,6 +65,63 @@ export interface Position {
   accruedYieldSats: bigint;
   apyBps: number;
   strategy: string;
+  /** True when accruedYieldSats was read from the live protocol instead of the router's fixed-APY estimate. */
+  yieldIsLive: boolean;
+}
+
+// Strategies that actually route sBTC into an external live protocol (Zest's
+// lending pool, Stacks' Dual Stacking rewards program). For these, the
+// router's `get-position-value` reports accrued yield from a fixed-APY
+// formula (elapsed blocks * apy-bps) — a stale estimate that was never wired
+// up to real protocol state (see docs/milestone-2-plan.md section 4). The
+// strategy contracts themselves already expose the real numbers: `get-tvl`
+// is a read-only that returns the protocol-sourced total value (Zest's zsBTC
+// balance, or the strategy's own sBTC balance for Dual Stacking — both
+// interest/reward-inclusive), and `total-principal` is the pooled principal
+// those values are measured against. `total-principal` has no getter
+// function, but it's a plain data-var, so it's readable via the node's raw
+// data-var endpoint. Hermetica and mock-yield pay a fixed synthetic rate with
+// no external protocol behind them, so the router's formula is already the
+// correct source for those — no override needed.
+const LIVE_PROTOCOL_STRATEGIES: ReadonlySet<string> = new Set(['zest', 'dual-stacking']);
+
+interface LiveStrategyTotals {
+  totalValueSats: bigint;
+  totalPrincipalSats: bigint;
+}
+
+async function fetchTotalPrincipalSats(address: string, name: string): Promise<bigint | null> {
+  const res = await fetch(`${HIRO_API_URL}/v2/data_var/${address}/${name}/total-principal?proof=0`);
+  if (!res.ok) return null;
+  const body = (await res.json()) as { data?: string };
+  if (!body.data) return null;
+  const cv = hexToCV(body.data);
+  return cvType(cv) === CT.uint ? asUint(cv as UIntCV) : null;
+}
+
+async function fetchLiveStrategyTotals(name: StrategyName): Promise<LiveStrategyTotals | null> {
+  const ref = STRATEGIES[name];
+  if (!ref) return null;
+  try {
+    const [tvlResult, totalPrincipalSats] = await Promise.all([
+      fetchCallReadOnlyFunction({
+        contractAddress: ref.address,
+        contractName: ref.name,
+        functionName: 'get-tvl',
+        functionArgs: [],
+        senderAddress: ref.address,
+        network,
+      }),
+      fetchTotalPrincipalSats(ref.address, ref.name),
+    ]);
+    if (totalPrincipalSats === null) return null;
+    // get-tvl returns (response uint uint); unwrap the ok.
+    const inner = cvType(tvlResult) === CT.ok ? (tvlResult as { value: unknown }).value : tvlResult;
+    if (cvType(inner) !== CT.uint) return null;
+    return { totalValueSats: asUint(inner as UIntCV), totalPrincipalSats };
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -90,7 +147,28 @@ export async function getPositions(address: string): Promise<Position[]> {
       .map((v) => Number(asUint(v)));
 
     const positions = await Promise.all(ids.map((id) => getPosition(address, id)));
-    return positions.filter((p): p is RawPosition => p !== null && !p.closed);
+    const open = positions.filter((p): p is RawPosition => p !== null && !p.closed);
+
+    // One live-totals read per distinct live-protocol strategy in play, not
+    // per position, so a dashboard with several Zest positions still makes a
+    // single get-tvl + total-principal read for Zest.
+    const liveStrategyNames = [...new Set(open.map((p) => p.strategy))].filter(
+      (s): s is StrategyName => LIVE_PROTOCOL_STRATEGIES.has(s)
+    );
+    const liveTotalsEntries = await Promise.all(
+      liveStrategyNames.map(async (s) => [s, await fetchLiveStrategyTotals(s)] as const)
+    );
+    const liveTotals = new Map(liveTotalsEntries);
+
+    return open.map((p) => {
+      const totals = liveTotals.get(p.strategy as StrategyName);
+      if (!totals || totals.totalPrincipalSats === 0n) return { ...p, yieldIsLive: false };
+      const live =
+        totals.totalValueSats > totals.totalPrincipalSats
+          ? (p.amountSats * (totals.totalValueSats - totals.totalPrincipalSats)) / totals.totalPrincipalSats
+          : 0n;
+      return { ...p, accruedYieldSats: live, yieldIsLive: true };
+    });
   } catch {
     return [];
   }
@@ -151,6 +229,7 @@ async function getPosition(address: string, id: number): Promise<RawPosition | n
     accruedYieldSats: asUint(accruedYield as UIntCV),
     apyBps: Number(asUint(apyBps as UIntCV)),
     strategy: (strategy as { value: string }).value,
+    yieldIsLive: false,
     closed: cvType(closed) === CT.true,
   };
 }
