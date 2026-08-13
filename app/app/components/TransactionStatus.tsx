@@ -124,9 +124,10 @@ export function PendingCard({
             Watch it confirm on the explorer ↗
           </a>
           <p className="text-zinc-600 text-xs mt-1.5 max-w-xs mx-auto leading-relaxed">
-            The explorer can briefly show an inaccurate status while your transaction is still confirming.
-            This page only says done once it is genuinely final, so trust it over the explorer until this
-            screen updates.
+            BitYield sponsors your network fee, and the explorer&rsquo;s status badge is known to
+            mislabel sponsored transactions as &ldquo;Failed&rdquo; even when they succeed. Everything
+            else there (amounts, addresses, block) is accurate, just not that badge. Trust this page:
+            it only says done once your transaction is genuinely final.
           </p>
         </div>
       )}
