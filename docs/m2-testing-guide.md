@@ -12,8 +12,10 @@ as `zest-strategy-live-v2`; see "Zest incident" below for that story. Dual
 Stacking's router plumbing is dust-tested (deposit+withdraw round trip,
 confirmed `success`), and it now holds 0.0001 sBTC and is enrolled in the sBTC
 rewards program, pending the next reward cycle; see "Dual Stacking
-enrollment" below. See also `docs/milestone-2-plan.md` for the full design
-and evidence.
+enrollment" below. Hermetica (preview) was found broken (never re-registered
+after the M2 redeploy) and fixed as `hermetica-strategy-live`; see "Hermetica
+re-registration" below. See also `docs/milestone-2-plan.md` for the full
+design and evidence.
 
 ## Deployed M2 contracts (mainnet)
 
@@ -28,6 +30,7 @@ Deployer / owner: `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB` (fresh, isolated).
 | `SP37FXV5….zest-strategy-live` (SUPERSEDED, see incident) | `0xae20ad6f…6c9c583649` |
 | `SP37FXV5….zest-strategy-live-v2` (CURRENT) | `0x3dcce3b1…36a6e2a11` |
 | `SP37FXV5….dual-stacking-strategy-live` | `0x8e48dd90…b43744aaa` |
+| `SP37FXV5….hermetica-strategy-live` | `0x5d74f5e1…ac91e73b2` |
 
 Post-deploy config (all confirmed success):
 - `set-sbtc-token` -> `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token` (`0x1c75cd5f…c1a32fb`)
@@ -38,6 +41,8 @@ Post-deploy config (all confirmed success):
   `zest-strategy-live-v2` likewise (`0xc04d329e…f79f388b60b8ab`)
 - enrolled `dual-stacking-strategy-live` in `sbtc-yield-rewards-v3`
   (`0x100b7544…349caa36b`) -- see "Dual Stacking enrollment" below
+- `add-strategy "hermetica"` -> `hermetica-strategy-live` (`0x0166744c…2cae76f01`)
+  -- see "Hermetica re-registration" below
 
 ## Zest incident: oracle rotation, dust loss, redeploy (2026-08-13)
 
@@ -128,6 +133,60 @@ never confirmed by them. This will be settled empirically: after the next
 cycle, check the strategy's sBTC balance for an increase. If rewards land,
 withdraw to prove the full round trip with real yield and capture txids for
 the milestone; if not, that's the trigger to actually send the outreach.
+
+## Hermetica re-registration (2026-08-13): found broken during a frontend audit, fixed
+
+A full frontend accuracy pass turned up a real functional bug, not just stale
+copy: `"hermetica"` was never registered on the M2 router at all. Confirmed
+via `get-strategy` returning `none`. Since the router's `deposit` asserts the
+strategy name is registered before doing anything else, any user who
+selected Hermetica Structured in the app and confirmed a deposit would have
+hit a hard revert. Root cause: the M2 redeploy under the fresh `SP37FXV5…`
+deployer only carried over `zest-strategy-live` and `dual-stacking-strategy-live`
+(the two routes that needed new withdraw logic); `hermetica-strategy` was
+simply never redeployed or re-registered under the new deployer, unlike M1
+where it was registered on the old `SP360…` router.
+
+**First fix attempt failed and surfaced a more important finding.** Tried
+deploying the current local `contracts/hermetica-strategy.clar` as-is --
+reverted immediately with `vm_error: "use of unresolved contract
+'SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.oracle-trait'"`
+(`0xe4211055…ba1db32`, small STX fee spent, no funds at risk). Root cause:
+**the local repo has moved ahead of what is actually deployed on mainnet.**
+The oracle-dynamic redesign (see below) added `<oracle-trait>` to
+`yield-strategy-trait.clar` and every strategy contract's `withdraw`
+signature locally, but that redesign was never deployed -- confirmed by
+reading the actual deployed `yield-strategy-trait` source, whose `withdraw`
+is still `(uint principal uint uint <sip-010-trait> (optional (buff 8192)))`,
+6 args, no oracle. So any local strategy file written against the *current*
+local trait (oracle-inclusive) is incompatible with what the live router
+and live `yield-strategy-trait` actually require, and will fail to resolve
+`.oracle-trait` (which doesn't exist under this deployer) before it even
+reaches trait-conformance checking.
+
+**Fix**: wrote `contracts/hermetica-strategy-live.clar`, matching the
+*actually-deployed* (pre-redesign) interface -- structurally mirrored
+against the real deployed `dual-stacking-strategy-live` source (fetched
+directly from chain as ground truth, since that contract is proven correct
+against the live trait by its own successful round-trip test earlier).
+Added the same owner-recovery functions (`owner-sweep-ft`, `owner-sweep-stx`,
+`set-contract-owner`) the other two live strategies already have, since none
+existed on the original `hermetica-strategy.clar`. Deliberately NOT added to
+`Clarinet.toml` -- the local project's `yield-strategy-trait.clar` is the
+newer, oracle-inclusive shape, so this file will never pass local
+`impl-trait` conformance against it; it is a mainnet-target file, not a
+locally-checked one. Deployed successfully (`0x5d74f5e1…ac91e73b2`),
+registered on the router (`0x0166744c…2cae76f01`), `.env.local` and the
+deposit page updated to point at it, and the app's temporary UI-level
+"disabled" workaround removed.
+
+**Standing gotcha for future deploys**: any strategy contract redeployed
+under `SP37FXV5…` going forward must match the *actually-deployed* trait
+shape (no oracle-trait) until the full oracle-dynamic redesign (router +
+trait + all strategies) is deployed together as one coordinated cutover --
+mixing local "-live" filenames written against the newer local trait with a
+deploy under the current live router will hit this exact
+`unresolved contract 'oracle-trait'` error.
 
 ## Key accounts (mainnet)
 

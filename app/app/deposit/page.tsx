@@ -46,9 +46,8 @@ const STRATEGY_OPTIONS: StrategyOption[] = [
   },
   {
     id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', status: 'preview',
-    desc: 'Models Hermetica structured yield with a BitYield strategy contract paying a fixed 6.2% APY. Temporarily unavailable for new deposits while it is re-registered on the current router; live routing to Hermetica itself is on the roadmap.',
-    riskNote: 'Preview strategy, currently unavailable for new deposits. Hermetica Structured is a BitYield strategy contract paying a fixed 6.2% APY. It models Hermetica but does not route to it yet, and is temporarily not registered on the live router — check back shortly.',
-    disabled: true,
+    desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY. Live routing is on the roadmap.',
+    riskNote: 'Preview strategy. Hermetica Structured is a BitYield strategy contract paying a fixed 6.2% APY. It models Hermetica but does not route to it yet; the rate is set by the contract, not live market yield.',
   },
   {
     id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', status: 'live',

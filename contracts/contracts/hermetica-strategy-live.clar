@@ -1,10 +1,18 @@
-;; hermetica-strategy.clar
+;; hermetica-strategy-live.clar
 ;;
 ;; Hermetica structured BTC yield strategy conforming to yield-strategy-trait.
+;; Preview strategy: pays a fixed, admin-set APY. Does not route to Hermetica
+;; itself yet (live routing to Hermetica is on the roadmap).
+;;
+;; NOTE: matches the yield-strategy-trait shape actually deployed on mainnet
+;; under this deployer (withdraw with no oracle-trait argument), which
+;; predates the local oracle-dynamic redesign. Kept as a standalone file,
+;; deliberately not tracked by the local Clarinet.toml, since the local
+;; yield-strategy-trait.clar has since moved ahead to the oracle-inclusive
+;; shape that is not yet deployed. See docs/m2-testing-guide.md.
 
 (impl-trait .yield-strategy-trait.yield-strategy-trait)
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
-(use-trait oracle-trait .oracle-trait.oracle-trait)
 
 (define-constant BLOCKS-PER-YEAR u52560)
 (define-constant BPS-DENOMINATOR u10000)
@@ -29,7 +37,14 @@
   )
 )
 
-(define-public (withdraw (amount uint) (recipient principal) (entry-block uint) (apy-bps uint) (token <sip-010-trait>) (oracle <oracle-trait>) (price-feed-bytes (optional (buff 8192))))
+(define-public (withdraw
+    (amount uint)
+    (recipient principal)
+    (entry-block uint)
+    (apy-bps uint)
+    (token <sip-010-trait>)
+    (price-feed-bytes (optional (buff 8192)))
+  )
   (begin
     (asserts! (is-authorized-router) ERR-NOT-ROUTER)
     (let (

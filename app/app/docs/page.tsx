@@ -232,8 +232,7 @@ export default function DocsPage() {
                   </div>
                   <p className="text-sm">
                     A BitYield strategy contract paying a fixed, transparent APY today, modelling
-                    Hermetica&apos;s structured yield without routing to it yet. Currently unavailable
-                    for new deposits while it is re-registered on the router; live routing to
+                    Hermetica&apos;s structured yield without routing to it yet. Live routing to
                     Hermetica itself is on the roadmap.
                   </p>
                 </div>
@@ -306,6 +305,9 @@ export default function DocsPage() {
                 </li>
                 <li>
                   Dual Stacking strategy: <Mono>SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.dual-stacking-strategy-live</Mono>
+                </li>
+                <li>
+                  Hermetica strategy: <Mono>SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.hermetica-strategy-live</Mono>
                 </li>
                 <li>
                   sBTC token: <Mono>SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token</Mono>
