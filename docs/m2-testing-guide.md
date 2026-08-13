@@ -1,11 +1,16 @@
 # Milestone 2 Testing and Deploy Guide (handoff)
 
-Status as of 2026-08-13: **M1 approved; M2 DEPLOYED TO MAINNET, configured, and live
-on bityield.click.** Zest route hit a real issue during the first dust test
-(Zest rotated an oracle contract), which was diagnosed, fixed, and redeployed;
-Dual Stacking has not been dust-tested yet. See "Zest incident" below for the
-full story, including a small unrecoverable dust loss and a design lesson.
-See also `docs/milestone-2-plan.md` for the full design and evidence.
+Status as of 2026-08-13: **M1 approved; M2 DEPLOYED TO MAINNET and CONFIRMED
+WORKING.** A full Zest deposit and withdrawal completed successfully through
+the app on real mainnet: deposit
+[`0x121a7328…`](https://explorer.hiro.so/txid/0x121a7328b0bd3601d3dc74dbad8ec83fb9d5d32bbf56af9eee4089b4c6ff2a88?chain=mainnet),
+withdrawal
+[`0x7b909c7c…`](https://explorer.hiro.so/txid/0x7b909c7c6e8e9159659133ec61537f92e0fa93776c13731e675f8717d518be10?chain=mainnet),
+both `success`. The Zest route hit a real issue during the first dust test
+(Zest rotated an oracle contract), which was diagnosed, fixed, and redeployed
+as `zest-strategy-live-v2`; see "Zest incident" below for that story. Dual
+Stacking is deployed and registered but not yet dust-tested. See also
+`docs/milestone-2-plan.md` for the full design and evidence.
 
 ## Deployed M2 contracts (mainnet)
 

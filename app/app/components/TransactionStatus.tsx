@@ -114,14 +114,21 @@ export function PendingCard({
       <p className="text-zinc-400">{subtitle}</p>
 
       {phase === 'confirming' && explorerUrl && (
-        <a
-          href={explorerUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-block mt-4 text-sm text-bitcoin/90 hover:text-bitcoin hover:underline"
-        >
-          Watch it confirm on the explorer ↗
-        </a>
+        <div className="mt-4">
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm text-bitcoin/90 hover:text-bitcoin hover:underline"
+          >
+            Watch it confirm on the explorer ↗
+          </a>
+          <p className="text-zinc-600 text-xs mt-1.5 max-w-xs mx-auto leading-relaxed">
+            The explorer can briefly show an inaccurate status while your transaction is still confirming.
+            This page only says done once it is genuinely final, so trust it over the explorer until this
+            screen updates.
+          </p>
+        </div>
       )}
 
       {footer && <p className="text-zinc-600 text-sm mt-6">{footer}</p>}

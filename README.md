@@ -7,7 +7,7 @@
 [![Built on Stacks](https://img.shields.io/badge/Built%20on-Stacks-orange)](https://stacks.co)
 [![Asset](https://img.shields.io/badge/Asset-sBTC-yellow)](https://stacks.co/sbtc)
 [![Network](https://img.shields.io/badge/Deployed%20on-Bitcoin%20Mainnet-brightgreen)](#deployment)
-[![Stage](https://img.shields.io/badge/Stage-Controlled%20demo%20(v0.1)-blue)](#status)
+[![Stage](https://img.shields.io/badge/Stage-Controlled%20demo%20(v0.2)-blue)](#status)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
 ---
@@ -33,11 +33,9 @@ gated on an independent audit and a multisig owner (see [Roadmap](#roadmap)).
 - Router points at the canonical mainnet sBTC token
   (`SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`).
 - **Live routing:** the `zest` strategy (`zest-strategy-live-v2`) routes real
-  sBTC into Zest Protocol lending. A first mainnet dust test surfaced a real
-  lesson (Zest rotated its price oracle mid-project, and the earlier contract
-  version hardcoded the old one, permanently stranding a small test amount);
-  full incident writeup and the current mitigation approach are in
-  `docs/m2-testing-guide.md`. The `dual-stacking` strategy
+  sBTC into Zest Protocol lending, with a **confirmed successful real deposit
+  and withdrawal** through the app (see [v0.2 — live Zest
+  routing](#v02--live-zest-routing) below). The `dual-stacking` strategy
   (`dual-stacking-strategy-live`) is deployed and registered, not yet
   dust-tested. `hermetica` remains a **preview** strategy (fixed admin-set
   APY, does not route to a real protocol) — see [Roadmap](#roadmap).
@@ -245,6 +243,28 @@ sponsored. The resulting position is visible on `/dashboard`, `/proof`, and the
 
 ---
 
+## v0.2 — live Zest routing
+
+v0.2 routes real sBTC deposits into **live Zest Protocol lending** instead of
+a fixed, admin-set preview rate. The `zest` strategy
+(`zest-strategy-live-v2`, under a fresh, isolated deployer) supplies deposits
+into Zest and redeems them on withdrawal.
+
+A full deposit and withdrawal through the app, with real sBTC, on Bitcoin
+mainnet, both gas-sponsored:
+
+| Action | Transaction |
+|--------|-------------|
+| Deposit into Zest | [`0x121a7328…`](https://explorer.hiro.so/txid/0x121a7328b0bd3601d3dc74dbad8ec83fb9d5d32bbf56af9eee4089b4c6ff2a88?chain=mainnet) |
+| Withdrawal (principal returned from Zest) | [`0x7b909c7c…`](https://explorer.hiro.so/txid/0x7b909c7c6e8e9159659133ec61537f92e0fa93776c13731e675f8717d518be10?chain=mainnet) |
+
+Full deployment record, addresses, and testing notes are in
+[`docs/m2-testing-guide.md`](docs/m2-testing-guide.md). Dual Stacking routing
+(`dual-stacking-strategy-live`) is deployed and registered but not yet
+dust-tested.
+
+---
+
 ## Deployment
 
 **Mainnet** — deployer `SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN`
@@ -309,7 +329,7 @@ automatically (`app/lib/stacks/network.ts`).
 - [x] Demo video of the full mainnet deposit flow
 
 **v0.2 — real protocol routing**
-- [ ] Route the `zest` strategy into live **Zest Protocol** lending (real BTC yield)
+- [x] Route the `zest` strategy into live **Zest Protocol** lending (real BTC yield)
 - [ ] Read live APY/TVL from the protocol instead of a fixed rate
 - [ ] Independent audit of the routing contracts before public launch
 - [ ] Move contract ownership to a multisig / cold wallet
