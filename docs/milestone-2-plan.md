@@ -1,4 +1,4 @@
-gi# Milestone 2 Plan: Live Protocol Routing
+# v0.2 Plan: Live Protocol Routing
 
 > Integrate BitYield with live Stacks yield protocol routing, into at least two
 > live yield opportunities, with at least one mainnet interaction per route.
@@ -466,7 +466,7 @@ Artifacts: `contracts/contracts/zest-strategy-live.clar`,
 
 ---
 
-## 12. Milestone 2 completion checklist
+## 12. v0.2 completion checklist
 
 Grouped by track. "Done" items reflect the research and week-1 spike already
 completed. This checklist targets grant acceptance; the audit and multisig items
@@ -511,6 +511,6 @@ separately at the end.
 - [ ] Demo video covering the two-route flow
 - [ ] Submit for Endowment verification
 
-### Gated to public launch (NOT required for Milestone 2 sign-off)
+### Gated to public launch (NOT required for v0.2 sign-off)
 - [ ] Independent audit of the routing + strategy contracts
 - [ ] Move contract ownership to a multisig / cold wallet

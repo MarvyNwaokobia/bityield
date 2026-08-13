@@ -1,4 +1,4 @@
-# Milestone 2 Testing and Deploy Guide (handoff)
+# v0.2 Testing and Deploy Guide (handoff)
 
 Status as of 2026-08-13: **M1 approved; M2 DEPLOYED TO MAINNET and CONFIRMED
 WORKING.** A full Zest deposit and withdrawal completed successfully through
@@ -434,8 +434,9 @@ fixed, not papered over.
 `/deposit` now reflects the real per-route status instead of a uniform
 "Preview" label: Zest shows **Live** (routes real sBTC into Zest, with a risk
 note that it is a new, unaudited deployment with limited testing), Dual
-Stacking shows **Deployed** (contract is live and registered, but has not
-completed a full deposit-and-withdraw test), Hermetica stays **Preview**
-(unchanged, no real routing). The risk & disclosures panel on the confirm
-screen is now dynamic per selected route rather than one fixed "preview"
-paragraph for all three.
+Stacking also shows **Live** (a full deposit-and-withdraw round trip
+confirmed on-chain, then a real deposit held and enrolled in the rewards
+program — risk note flags that reward payout itself isn't confirmed yet),
+Hermetica stays **Preview** (unchanged, no real routing). The risk &
+disclosures panel on the confirm screen is now dynamic per selected route
+rather than one fixed "preview" paragraph for all three.

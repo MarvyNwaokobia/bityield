@@ -18,15 +18,14 @@
 deposit real sBTC, review the yield opportunity and risk disclosures, and
 confirm — with every transaction's STX fee sponsored so users never need to
 hold STX. The full flow is live and verifiable on-chain (see the demo
-transactions under [v0.1 — Stacks Endowment](#v01--stacks-endowment)).
+transactions under [v0.1 — deposit flow](#v01--deposit-flow)).
 
 **v0.1** delivered the end-to-end **deposit flow** — wallet, balance, yield
-opportunity, risk review, sponsored confirmation, on-chain position — and was
-approved by the Stacks Endowment. **v0.2 (Milestone 2) is now live**: real
-routing into both Zest Protocol lending and the Dual Stacking rewards
-program, deployed on Bitcoin mainnet under a fresh, isolated deployer, each
-with a confirmed real mainnet deposit. The contracts are
-unaudited and owner-controlled by a single key today; a public launch is
+opportunity, risk review, sponsored confirmation, on-chain position.
+**v0.2 is now live**: real routing into both Zest Protocol lending and the
+Dual Stacking rewards program, deployed on Bitcoin mainnet under a fresh,
+isolated deployer, each with a confirmed real mainnet deposit. The contracts
+are unaudited and owner-controlled by a single key today; a public launch is
 gated on an independent audit and a multisig owner (see [Roadmap](#roadmap)).
 
 - `YieldRouter` (mainnet, v0.2):
@@ -39,12 +38,13 @@ gated on an independent audit and a multisig owner (see [Roadmap](#roadmap)).
   (`dual-stacking-strategy-live`) routes real sBTC into the Stacks network's
   own Dual Stacking rewards program, with a **confirmed deposit-and-withdraw
   round trip**, and is currently enrolled and holding real principal pending
-  its first reward cycle (see [Milestone 2 — Stacks
-  Endowment](#milestone-2--stacks-endowment) below for both). Both routes'
+  its first reward cycle (see [v0.2 — real protocol
+  routing](#v02--real-protocol-routing) below for both). Both routes'
   APY is read live from the protocol, not a fixed BitYield rate — it can be
-  small (Zest's reflects real current borrowing demand). `hermetica` remains
-  a **preview** strategy (fixed admin-set APY, does not route to a real
-  protocol) — see [Roadmap](#roadmap).
+  small (Zest's reflects real current borrowing demand). A third strategy,
+  `hermetica`, is also deployed and registered on the router today, but
+  remains a **preview** (fixed admin-set APY, does not route to a real
+  protocol yet) — see [Roadmap](#roadmap).
 - The v0.1 router (`SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router`)
   and its preview strategies remain live and untouched; they are not part of
   v0.2 routing.
@@ -161,7 +161,7 @@ shipped four registered strategies** (`zest`, `hermetica`, `dual-stacking`,
 `mock-yield`); each was a self-contained contract paying a fixed, admin-set
 APY computed linearly from elapsed block height.
 
-Milestone 2 was the one deliberate exception to "router never redeploys": Zest
+v0.2 was the one deliberate exception to "router never redeploys": Zest
 requires a fresh Pyth price update passed through on `withdraw`, which the
 original trait/router interface had no argument for. Rather than leave that
 unreachable, the interface itself was extended (`withdraw` gained a
@@ -169,7 +169,7 @@ unreachable, the interface itself was extended (`withdraw` gained a
 `none`/ignore it) and redeployed once, deliberately, pre-audit — see
 [Deployment](#deployment) for why that required a fresh deployer address.
 
-Core Clarity interface (as deployed on the current Milestone 2 router):
+Core Clarity interface (as deployed on the current v0.2 router):
 
   (define-public (deposit (amount uint) (strategy-name (string-ascii 20))
                           (strategy <yield-strategy-trait>) (token <sip-010-trait>))
@@ -222,13 +222,13 @@ Frontend pages:
 
 ---
 
-## v0.1 — Stacks Endowment
+## v0.1 — deposit flow
 
 v0.1 delivers a **deposit flow live on Bitcoin mainnet** — from wallet
 connection through sponsored deposit confirmation — running as a controlled,
-team-funded demo. Mapping to the acceptance criteria:
+team-funded demo. What shipped:
 
-| Acceptance criterion | Where it lives |
+| Feature | Where it lives |
 |----------------------|----------------|
 | Connect a wallet | Leather / Stacks Connect — `/deposit`, `/dashboard` |
 | View a yield opportunity + expected rate | Strategy cards on `/deposit` (APY, provider modelled, risk) |
@@ -241,13 +241,13 @@ team-funded demo. Mapping to the acceptance criteria:
 **Demo video:** [youtu.be/0t2uiyaKrnA](https://youtu.be/0t2uiyaKrnA) — full mainnet deposit flow
 
 > Note: the live `/proof` page in the app always reads whichever router it's
-> currently configured against — today that's the Milestone 2 router below,
-> not this M1 deployer. The transactions below are the original M1 evidence,
-> viewable directly on the [M1 deployer's
+> currently configured against — today that's the v0.2 router below,
+> not this v0.1 deployer. The transactions below are the original v0.1 evidence,
+> viewable directly on the [v0.1 deployer's
 > explorer page](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet).
 
 A first end-to-end mainnet deposit + withdrawal, both gas-sponsored
-(user paid 0 STX), is recorded on the M1 deployment:
+(user paid 0 STX), is recorded on the v0.1 deployment:
 
 | Action | Transaction |
 |--------|-------------|
@@ -257,28 +257,39 @@ A first end-to-end mainnet deposit + withdrawal, both gas-sponsored
 To test it yourself: connect a Stacks wallet holding a small amount of sBTC,
 open `/deposit`, pick a strategy, and confirm. You pay **no STX** — the fee is
 sponsored. The resulting position is visible on `/dashboard` and `/proof`
-(both read the current Milestone 2 router, see below).
+(both read the current v0.2 router, see below).
 
 ---
 
-## Milestone 2 — Stacks Endowment
+## v0.2 — real protocol routing
 
-Milestone 2 integrates BitYield with **two live Stacks yield protocols** —
+v0.2 integrates BitYield with **two live Stacks yield protocols** —
 Zest Protocol (lending interest) and Dual Stacking (the Stacks network's own
 Bitcoin rewards program) — replacing the fixed, admin-set preview rate those
-two routes paid under Milestone 1. Both route real sBTC into the named
+two routes paid under v0.1. Both route real sBTC into the named
 protocol, at a rate read live from that protocol, not a number BitYield sets.
-Mapping to the acceptance criteria:
+A third strategy, Hermetica, was also carried forward to this deployment and
+is registered on the same router — see the note below the table. What
+shipped:
 
-| Acceptance criterion | Where it lives |
+| Feature | Where it lives |
 |-----------------------|----------------|
-| Two live Stacks yield opportunities | Zest (`zest-strategy-live-v2`) + Dual Stacking (`dual-stacking-strategy-live`), both registered on the Milestone 2 router |
+| Two live Stacks yield opportunities | Zest (`zest-strategy-live-v2`) + Dual Stacking (`dual-stacking-strategy-live`), both registered on the v0.2 router |
 | One mainnet interaction per route | Zest: real `supply`/`withdraw` into Zest's pool (below). Dual Stacking: real `enroll` into the rewards program, holding real principal (below) |
 | Route-specific position status, visible to the user | `/deposit` and `/dashboard` show each route's real protocol-sourced value, live-read from the strategy contract — not a formula estimate |
 | Route-specific protocol risk information | Per-route risk & disclosures panel on the deposit confirm screen (`/deposit`) |
 | Documentation | This README + [`docs/m2-testing-guide.md`](docs/m2-testing-guide.md) (full deploy record, incident history, testing checklist) + [`docs/milestone-2-plan.md`](docs/milestone-2-plan.md) (design) |
 | Transaction evidence | Table below, plus [`/proof`](https://bityield.click/proof) reading the live router straight from the chain |
 | Demo video | _(recording in progress)_ |
+
+**About the third route, Hermetica:** during this deployment a registration
+bug was found and fixed — `hermetica` had never been re-registered on the
+new router, so selecting it in the app would have hard-reverted any deposit.
+That's now fixed and it's live on the router again. It is **not** counted as
+one of v0.2's two live routes, though, because unlike Zest and Dual Stacking
+it still pays a fixed, admin-set rate rather than actually routing sBTC into
+Hermetica's protocol — live Hermetica routing is on the [Roadmap](#roadmap),
+not shipped yet.
 
 **Zest** — a real deposit and withdrawal through the app, with real sBTC, on
 Bitcoin mainnet, both gas-sponsored:
@@ -312,7 +323,7 @@ a real oracle-rotation incident on Zest and how it was fixed — are in
 
 ## Deployment
 
-**Mainnet (current — Milestone 2)** — deployer
+**Mainnet (current — v0.2)** — deployer
 `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB`
 ([explorer](https://explorer.hiro.so/address/SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB?chain=mainnet)),
 the deployment the live app (bityield.click) actually points at today:
@@ -331,22 +342,22 @@ The router is pointed at the canonical mainnet sBTC token
 are registered and active — verify with the router's `get-strategy` /
 `get-sbtc-token` read-only functions on the explorer, or on the app's `/proof` page.
 
-A fresh deployer was used for this redeploy (not a reuse of the M1 address
+A fresh deployer was used for this redeploy (not a reuse of the v0.1 address
 below) because the `withdraw` interface itself changed (an optional
 price-feed buffer, needed for Zest's oracle) — Clarity contracts are
 immutable, so the old `yield-router` and `yield-strategy-trait` names were
-already taken by the incompatible M1 versions. Full rationale, the deploy
+already taken by the incompatible v0.1 versions. Full rationale, the deploy
 phases, and a real incident (Zest rotated its oracle contract after this was
 first verified, which stranded a small amount of dust before being caught
 and fixed as `-v2`) are in
 [`docs/m2-testing-guide.md`](docs/m2-testing-guide.md).
 
 <details>
-<summary><strong>Mainnet (superseded) — Milestone 1</strong></summary>
+<summary><strong>Mainnet (superseded) — v0.1</strong></summary>
 
 Deployer `SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN`
 ([explorer](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet)) —
-the Milestone 1 deployment, kept live and untouched so its existing demo
+the v0.1 deployment, kept live and untouched so its existing demo
 positions remain withdrawable, but **not** the deployment the app routes new
 activity through:
 
@@ -378,7 +389,7 @@ cp .env.example .env.local     # then fill in the values below
 npm run dev                    # http://localhost:3000
 ```
 
-Required `app/.env.local` values, matching the current live (Milestone 2)
+Required `app/.env.local` values, matching the current live (v0.2)
 deployment (see `app/.env.example` and `contracts/DEPLOYMENT.md`):
 
 ```
@@ -394,14 +405,14 @@ SPONSOR_PRIVATE_KEY=...        # server-only; funds the fee-abstraction sponsor
 If left unset, `NEXT_PUBLIC_ZEST_STRATEGY_ADDRESS` /
 `NEXT_PUBLIC_DUAL_STRATEGY_ADDRESS` / `NEXT_PUBLIC_HERMETICA_STRATEGY_ADDRESS`
 each fall back to the router's deployer prefix plus the old **preview** name
-(e.g. `<deployer>.zest-strategy`) — which does not exist under the Milestone 2
+(e.g. `<deployer>.zest-strategy`) — which does not exist under the v0.2
 deployer, so the live routes above must be set explicitly (`app/lib/stacks/network.ts`).
 
 ---
 
 ## Roadmap
 
-**v0.1 — deposit flow live on mainnet (M1 approved)**
+**v0.1 — deposit flow live on mainnet**
 - [x] YieldRouter + pluggable strategy contracts deployed on **Bitcoin mainnet**
 - [x] Next.js frontend: deposit, withdraw, dashboard
 - [x] Leather Wallet integration, real on-chain sBTC balances
@@ -409,7 +420,7 @@ deployer, so the live routes above must be set explicitly (`app/lib/stacks/netwo
 - [x] Deposit preview, confirmation, and risk/audit disclosures
 - [x] Demo video of the full mainnet deposit flow
 
-**v0.2 — Milestone 2, real protocol routing**
+**v0.2 — real protocol routing**
 - [x] Route the `zest` strategy into live **Zest Protocol** lending (real BTC yield)
 - [x] Route the `dual-stacking` strategy into the live **Dual Stacking** rewards program
 - [x] Read live APY from each protocol instead of a fixed rate, across the app
@@ -453,7 +464,7 @@ everyone else.
 
 ## Contributing
 
-BitYield is an active project (Stacks Endowment). Issues and PRs for the
+BitYield is an active project. Issues and PRs for the
 frontend, contracts, and docs are welcome. See `CONTRIBUTING.md`.
 
 ---
@@ -465,4 +476,4 @@ MIT
 ---
 
 *Built on Stacks — Bitcoin's leading L2*
-*Deployed on Bitcoin mainnet (controlled demo) — Stacks Endowment, Milestone 2*
+*Deployed on Bitcoin mainnet (controlled demo) — v0.2*

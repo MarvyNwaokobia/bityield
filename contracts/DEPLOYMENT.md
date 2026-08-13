@@ -164,14 +164,14 @@ a clear "not configured" error rather than silently doing nothing.
 
 ---
 
-# Mainnet deployment — Milestone 2 (live protocol routing)
+# Mainnet deployment — v0.2 (live protocol routing)
 
 > **This is the current production deployment** — what `bityield.click`
 > actually runs against today. The Milestone 1 deployment further below is
 > kept live so its existing positions can still withdraw, but the app does
 > not route new activity through it.
 
-## Why a fresh deployer, not a reuse of Milestone 1's
+## Why a fresh deployer, not a reuse of v0.1's
 
 Zest requires a fresh Pyth price update passed into `withdraw` in the same
 transaction, and the original `yield-strategy-trait` / `yield-router`
@@ -231,7 +231,7 @@ router. Full incident writeup, including the failed recovery attempts and
 the underlying design lesson, is in
 [`docs/m2-testing-guide.md`](../docs/m2-testing-guide.md#zest-incident-oracle-rotation-dust-loss-redeploy-2026-08-13).
 
-## Redeploying Milestone 2 (if the interface changes again)
+## Redeploying v0.2 (if the interface changes again)
 
 Same shape as the original deploy: fresh deployer address, `clarinet
 deployments apply --mainnet` against a plan covering `sip-010-trait`,
@@ -268,7 +268,7 @@ naming), which don't exist under this deployer.
 
 ---
 
-# Mainnet deployment — Milestone 1 (superseded, kept live for withdrawals)
+# Mainnet deployment — v0.1 (superseded, kept live for withdrawals)
 
 > **Scope & safety (as of Milestone 1).** These are unaudited contracts, and
 > the strategies pay a fixed APY that is not backed by real protocol yield —
