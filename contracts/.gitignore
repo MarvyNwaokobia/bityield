@@ -30,3 +30,4 @@ costs-reports.json
 /.cache_deploy*
 /Clarinet.zest3design.toml
 /.cache_oracledesign
+/Clarinet.oldheight-check.toml

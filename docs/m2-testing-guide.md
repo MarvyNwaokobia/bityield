@@ -218,28 +218,63 @@ withdraw time, instead of hardcoded. Local-only so far, not deployed.
   the self-contained project.
 - Compiles and deploys against a mainnet fork as `zest-strategy-live-v3`.
 
-**BLOCKING ISSUE, discovered via mainnet-fork testing, NOT YET RESOLVED:** a
-funded deposit + withdraw attempt, passing the real
-`stx-btc-oracle-v1-6` contract as the dynamic `<oracle-trait>` argument,
-failed with `MaxStackDepthReached` deep inside Zest's own health-factor
-calculation chain. Confirmed via the actual stacks-core Rust source
-(`clarity-types/src/lib.rs`) that this is a REAL PROTOCOL-LEVEL limit
-(`MAX_CALL_STACK_DEPTH = 128` in current epochs, `= 64` legacy), not a
-simulator artifact. The same call chain worked fine with a LITERAL oracle
-argument (proven repeatedly in earlier tests); dynamic trait dispatch appears
-to add real stack frames at each contract boundary the trait value crosses
-(router -> strategy -> Zest's own deeply-nested internal calls), and Zest's
-own logic is already close to the ceiling.
+**STACK-DEPTH ISSUE: ROOT CAUSE FOUND AND FIXED.** A funded deposit + withdraw
+attempt, passing the real `stx-btc-oracle-v1-6` contract as the dynamic
+`<oracle-trait>` argument, originally failed with `MaxStackDepthReached` deep
+inside Zest's own health-factor calculation chain. Confirmed via the actual
+stacks-core Rust source (`clarity-types/src/lib.rs`) that this is a REAL
+PROTOCOL-LEVEL limit (`MAX_CALL_STACK_DEPTH = 128` in current epochs, `= 64`
+legacy; `CallStack.depth() = stack.len() + apply_depth`, incremented per
+named function/contract-call and per nested argument-evaluation, per
+`clarity/src/vm/mod.rs`), not a simulator artifact. Dynamic trait dispatch
+adds real stack frames at each contract boundary the trait value crosses, and
+Zest's own logic is already close to the ceiling, so **our own extra
+indirection was the fixable part**. Fix applied: inlined the private
+`redeem-and-forward` function directly into `withdraw` and
+`owner-emergency-zest-redeem` (removing one call-stack frame each), and
+reverted the sBTC balance/transfer calls back to the hardcoded literal
+instead of the `token` trait parameter (an accidental second trait dispatch
+introduced during inlining, caught and fixed). **Result: a funded fork test
+with the inlined code got completely past the entire depth-limited health-
+factor chain**, reaching a later-stage error instead of `MaxStackDepthReached`
+-- proof the fix works. This is the load-bearing, proven result of this
+investigation.
 
-**Open question, not yet answered:** does this fail on REAL mainnet too, or
-only in the fork simulator (e.g. if the fork's effective epoch uses the
-legacy 64-limit while real mainnet is on the 128-limit with more headroom)?
-Unknown without a real mainnet test.
+**Getting a fully clean end-to-end fork run remains elusive, but for reasons
+that look like fork-testing artifacts, not new contract bugs.** Subsequent
+re-runs hit inconsistent secondary errors (`u3001` Pyth-fee-insufficient when
+the strategy wasn't funded with STX; `u7004` `ERR_DOES_NOT_EXIST` once,
+traced exhaustively through every `get-reserve-state` call site in the chain
+with no origin found despite all 10 assets confirmed live both at the fork's
+height and currently; a Pyth decoder byte-slice error plus a RECURRENCE of
+`MaxStackDepthReached` when STX-funding was added, because `transferSTX`
+mines an extra block that shifts the fork's timing relative to a
+pre-fetched Pyth update). This pattern points at the fork's inability to hold
+Pyth timing, Wormhole guardian-set state, and block-mining side effects
+consistent together (the same class of limitation documented in
+`docs/milestone-2-plan.md` section 11 from the original spike), not at a
+regression of the depth fix.
 
-**DO NOT DEPLOY this design until resolved.** `zest-strategy-live-v2` (hardcoded
-oracle, the currently live, correctly-configured contract) remains the
-production strategy. Next steps to resolve: (a) confirm whether real mainnet
-hits the same limit (would require a real dust transaction using this exact
-call pattern), or (b) reduce the number of contract-boundary crossings the
-oracle trait threads through (e.g. inlining `redeem-and-forward`, or a leaner
-call path), which needs more design work.
+**Recommendation: the depth question is answered; the next decisive step is a
+small real mainnet test**, which has correct, non-simulated Pyth/Wormhole
+state by construction and would either confirm the inlined design cleanly or
+surface a genuinely new issue without fork noise. This has NOT been done.
+
+**STILL NOT DEPLOYED.** `zest-strategy-live-v2` (hardcoded oracle, no trait
+dispatch, so structurally not exposed to this depth issue at all) remains the
+live, production strategy on mainnet. It has been fixed and redeployed after
+the original incident but its own withdraw path has not yet had a full
+real-fund confirmation either (see "Zest incident" above) -- that is the
+recommended immediate test (see app UI status below), independent of and
+simpler than the v3 oracle-dynamic work.
+
+## App UI status (2026-08-13)
+
+`/deposit` now reflects the real per-route status instead of a uniform
+"Preview" label: Zest shows **Live** (routes real sBTC into Zest, with a risk
+note that it is a new, unaudited deployment with limited testing), Dual
+Stacking shows **Deployed** (contract is live and registered, but has not
+completed a full deposit-and-withdraw test), Hermetica stays **Preview**
+(unchanged, no real routing). The risk & disclosures panel on the confirm
+screen is now dynamic per selected route rather than one fixed "preview"
+paragraph for all three.

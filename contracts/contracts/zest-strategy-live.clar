@@ -75,83 +75,45 @@
   )
 )
 
-;; Private: redeem `redeem-amount` sBTC from Zest and forward the measured balance
-;; delta to `recipient`. sBTC is hardcoded (this strategy only ever holds sBTC),
-;; so no trait needs threading through for the asset itself. `oracle` is the
-;; caller-supplied current STX/BTC oracle (see file header), used as the
-;; TOP-LEVEL oracle argument -- this is exactly the check that broke in the
-;; 2026-08-13 incident (Zest's `(asserts! (is-eq (contract-of oracle)
-;; (get oracle reserve-state)) ERR_INVALID_ORACLE)`), so making it caller-
-;; supplied directly fixes that failure mode: a future rotation is a parameter
-;; update, not a redeploy.
+;; NOTE ON INLINING: `redeem-and-forward` used to be a shared private function
+;; called by both `withdraw` and `owner-emergency-zest-redeem`. It is now
+;; inlined into each (duplicated below) instead of shared, purely to remove
+;; one call-stack frame from the path into Zest's withdraw. Discovered
+;; 2026-08-13: a funded mainnet-fork test hit `MaxStackDepthReached` (a real
+;; Stacks protocol limit, `MAX_CALL_STACK_DEPTH`, confirmed in stacks-core
+;; source; not a simulator artifact) deep inside Zest's own health-factor
+;; calculation, specifically when the oracle argument is a caller-supplied
+;; `<oracle-trait>` value rather than a hardcoded literal -- dynamic trait
+;; dispatch appears to add real depth at each contract boundary the value
+;; crosses, and Zest's own call chain already leaves little headroom. This
+;; inlining removes one guaranteed frame (the private-function-call boundary);
+;; whether it is enough on its own is not yet proven (see
+;; docs/m2-testing-guide.md, "Oracle-dynamic redesign").
 ;;
 ;; The `assets` list below still hardcodes each entry's oracle as a literal,
 ;; INCLUDING the four (ststx, wstx, sbtc, ststxbtc) that share the same
 ;; STX/BTC oracle as the top-level argument. This is a real Clarity limitation,
 ;; not a choice: a trait-typed parameter can be passed as a bare function
 ;; argument, but cannot be embedded as a value inside a tuple/list literal
-;; constructed in contract code (confirmed by compiling this design: attempting
-;; `oracle: oracle` inside these tuples fails with a
-;; CallableType(Trait)/PrincipalType mismatch). Making the assets-list oracles
-;; dynamic too would require the caller to supply the entire `assets` list as a
-;; raw transaction argument (trait-typed tuple fields can only be supplied at
-;; the top-level transaction, not constructed mid-call), which would push
-;; Zest's full 10-asset structure into the shared yield-strategy-trait
-;; interface -- a much bigger change. Deferred: today's incident was
+;; constructed in contract code (confirmed by compiling: `oracle: oracle`
+;; inside these tuples fails with a CallableType(Trait)/PrincipalType
+;; mismatch). Making the assets-list oracles dynamic too would require the
+;; caller to supply the entire `assets` list as a raw transaction argument,
+;; pushing Zest's full 10-asset structure into the shared yield-strategy-trait
+;; interface -- a much bigger change, not done. The 2026-08-13 incident was
 ;; specifically the top-level check, not these entries, so this scope matches
-;; the actual failure observed. If one of these entries' oracles ever rotates
-;; independently, it needs a redeploy, same as before this change.
-;; Shared by the router withdraw and the owner emergency redeem.
-(define-private (redeem-and-forward
-    (redeem-amount uint)
-    (recipient principal)
-    (oracle <oracle-trait>)
-    (price-feed-bytes (optional (buff 8192)))
-  )
-  (let (
-      (bal-before (unwrap! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance (as-contract tx-sender)) ERR-BALANCE-READ))
-    )
-    (try! (as-contract
-      (contract-call? 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.borrow-helper-v2-1-7 withdraw
-        'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0            ;; lp
-        'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.pool-0-reserve-v2-0   ;; pool-reserve
-        'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token          ;; asset
-        oracle                                                         ;; oracle (caller-supplied)
-        redeem-amount
-        (as-contract tx-sender)                                        ;; owner = self
-        ;; assets: MUST list every Zest reserve asset, in registry order, for
-        ;; the health-factor check (validate-assets enforces len match).
-        ;; Order/ids ground-truthed from a real sBTC withdraw tx (0xcee0ca58).
-        (list
-          { asset: 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zststx-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
-          { asset: 'SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.token-aeusdc, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zaeusdc-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.aeusdc-oracle-v1-0 }
-          { asset: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.wstx, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zwstx-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
-          { asset: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zdiko-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.diko-oracle-v1-1 }
-          { asset: 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zusdh-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.usdh-oracle-v1-0 }
-          { asset: 'SP2XD7417HGPRTREMKF748VNEQPDRR0RMANB7X1NK.token-susdt, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsusdt-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.susdt-oracle-v1-0 }
-          { asset: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.usda-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zusda-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.usda-oracle-v1-1 }
-          { asset: 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
-          { asset: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.token-alex, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zalex-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.alex-oracle-v1-1 }
-          { asset: 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-token-v2, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zststxbtc-v2_v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
-        )                                                              ;; assets
-        'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.incentives-v2-2       ;; incentives
-        price-feed-bytes)))
-    (let (
-        (bal-after (unwrap! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance (as-contract tx-sender)) ERR-BALANCE-READ))
-        (received (- bal-after bal-before))
-      )
-      (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer received (as-contract tx-sender) recipient none)))
-      (ok received)
-    )
-  )
-)
+;; the actual failure observed.
 
 ;; Withdraw: redeem this position's PRO-RATA share of the pool from Zest and send
 ;; it to the recipient. redeem-amount = amount * total-value / total-principal,
 ;; where total-value is the interest-inclusive sBTC value of the pooled zsbtc
 ;; (zsbtc get-balance). So the position gets principal + its share of accrued
 ;; interest, not just principal. `token` is kept for trait conformance; the
-;; strategy always transacts in the canonical sBTC hardcoded above.
+;; strategy always transacts in the canonical sBTC hardcoded above. `oracle` is
+;; the caller-supplied current STX/BTC oracle (see file header) -- this is the
+;; exact check that broke in the 2026-08-13 incident, so making it caller-
+;; supplied fixes that failure mode: a future rotation is a parameter update,
+;; not a redeploy (subject to the stack-depth caveat above).
 (define-public (withdraw
     (amount uint)
     (recipient principal)
@@ -167,9 +129,36 @@
         (principal-total (var-get total-principal))
         (total-value (unwrap! (contract-call? 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0 get-balance (as-contract tx-sender)) ERR-BALANCE-READ))
         (redeem-amount (if (> principal-total u0) (/ (* amount total-value) principal-total) amount))
+        (bal-before (unwrap! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance (as-contract tx-sender)) ERR-BALANCE-READ))
       )
-      (let ((received (try! (redeem-and-forward redeem-amount recipient oracle price-feed-bytes))))
-        ;; Reduce tracked principal by this position's principal (not redeem-amount,
+      (try! (as-contract
+        (contract-call? 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.borrow-helper-v2-1-7 withdraw
+          'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0            ;; lp
+          'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.pool-0-reserve-v2-0   ;; pool-reserve
+          'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token          ;; asset
+          oracle                                                         ;; oracle (caller-supplied)
+          redeem-amount
+          (as-contract tx-sender)                                        ;; owner = self
+          (list
+            { asset: 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zststx-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
+            { asset: 'SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.token-aeusdc, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zaeusdc-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.aeusdc-oracle-v1-0 }
+            { asset: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.wstx, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zwstx-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
+            { asset: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zdiko-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.diko-oracle-v1-1 }
+            { asset: 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zusdh-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.usdh-oracle-v1-0 }
+            { asset: 'SP2XD7417HGPRTREMKF748VNEQPDRR0RMANB7X1NK.token-susdt, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsusdt-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.susdt-oracle-v1-0 }
+            { asset: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.usda-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zusda-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.usda-oracle-v1-1 }
+            { asset: 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
+            { asset: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.token-alex, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zalex-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.alex-oracle-v1-1 }
+            { asset: 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-token-v2, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zststxbtc-v2_v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
+          )                                                              ;; assets
+          'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.incentives-v2-2       ;; incentives
+          price-feed-bytes)))
+      (let (
+          (bal-after (unwrap! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance (as-contract tx-sender)) ERR-BALANCE-READ))
+          (received (- bal-after bal-before))
+        )
+        (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer received (as-contract tx-sender) recipient none)))
+        ;; Reduce tracked principal by this position's principal (not received,
         ;; which includes its interest share). Clamp to avoid underflow.
         (var-set total-principal (if (>= principal-total amount) (- principal-total amount) u0))
         (ok received)
@@ -204,7 +193,8 @@
 
 ;; Owner-only emergency: redeem `amount` sBTC from Zest directly to `recipient`,
 ;; bypassing the router and pro-rata accounting. Use only for recovery if the
-;; normal withdraw path is broken.
+;; normal withdraw path is broken. Inlined (not shared with `withdraw`) for the
+;; same stack-depth reason noted at `withdraw` above.
 (define-public (owner-emergency-zest-redeem
     (amount uint)
     (recipient principal)
@@ -213,7 +203,39 @@
   )
   (begin
     (asserts! (is-owner) ERR-NOT-OWNER)
-    (redeem-and-forward amount recipient oracle price-feed-bytes)
+    (let (
+        (bal-before (unwrap! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance (as-contract tx-sender)) ERR-BALANCE-READ))
+      )
+      (try! (as-contract
+        (contract-call? 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.borrow-helper-v2-1-7 withdraw
+          'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0            ;; lp
+          'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.pool-0-reserve-v2-0   ;; pool-reserve
+          'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token          ;; asset
+          oracle                                                         ;; oracle (caller-supplied)
+          amount
+          (as-contract tx-sender)                                        ;; owner = self
+          (list
+            { asset: 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zststx-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
+            { asset: 'SP3Y2ZSH8P7D50B0VBTSX11S7XSG24M1VB9YFQA4K.token-aeusdc, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zaeusdc-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.aeusdc-oracle-v1-0 }
+            { asset: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.wstx, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zwstx-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
+            { asset: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zdiko-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.diko-oracle-v1-1 }
+            { asset: 'SPN5AKG35QZSK2M8GAMR4AFX45659RJHDW353HSG.usdh-token-v1, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zusdh-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.usdh-oracle-v1-0 }
+            { asset: 'SP2XD7417HGPRTREMKF748VNEQPDRR0RMANB7X1NK.token-susdt, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsusdt-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.susdt-oracle-v1-0 }
+            { asset: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.usda-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zusda-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.usda-oracle-v1-1 }
+            { asset: 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
+            { asset: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.token-alex, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zalex-v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.alex-oracle-v1-1 }
+            { asset: 'SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststxbtc-token-v2, lp-token: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zststxbtc-v2_v2-0, oracle: 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6 }
+          )                                                              ;; assets
+          'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.incentives-v2-2       ;; incentives
+          price-feed-bytes)))
+      (let (
+          (bal-after (unwrap! (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token get-balance (as-contract tx-sender)) ERR-BALANCE-READ))
+          (received (- bal-after bal-before))
+        )
+        (try! (as-contract (contract-call? 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token transfer received (as-contract tx-sender) recipient none)))
+        (ok received)
+      )
+    )
   )
 )
 
