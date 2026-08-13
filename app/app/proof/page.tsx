@@ -12,11 +12,11 @@ import {
   STRATEGIES,
   toContractId,
   explorerContractUrl,
+  explorerTxUrl,
   type StrategyName,
 } from '@/lib/stacks/network';
 
 const chain = NETWORK_NAME === 'mainnet' ? 'mainnet' : 'testnet';
-const explorerTxUrl = (txid: string) => `https://explorer.hiro.so/txid/${txid}?chain=${chain}`;
 
 function shortId(id: string) {
   if (id.includes('.')) {

@@ -10,13 +10,10 @@ import { DEFAULT_APY_BPS, getBestRate, getPositions, type Position } from '@/lib
 import { formatBtc, satsToBtc } from '@/lib/stacks/format';
 import { fadeSlideUp, hoverScale, springTransition, staggerContainer } from '@/lib/motion';
 import { fetchUserActivity, type RouterTx } from '@/lib/stacks/analytics';
-import { NETWORK_NAME } from '@/lib/stacks/network';
+import { explorerTxUrl } from '@/lib/stacks/network';
 import { ConnectPrompt } from '../components/ConnectPrompt';
 import { AnimatedNumber } from '../components/AnimatedNumber';
 import { PrimaryLinkButton, SecondaryLinkButton } from '../components/Button';
-
-const explorerTxUrl = (txid: string) =>
-  `https://explorer.hiro.so/txid/${txid}?chain=${NETWORK_NAME === 'mainnet' ? 'mainnet' : 'testnet'}`;
 
 function formatWhen(iso: string | null): string {
   if (!iso) return '-';

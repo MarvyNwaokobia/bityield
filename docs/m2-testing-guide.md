@@ -95,8 +95,10 @@ least once (v1-4 -> v1-6) during this project's lifetime.
 Real dust round trip first, same as Zest: deposit + withdraw 10 sats through
 `dual-stacking-strategy-live` via the app, confirmed `success` via the Hiro
 API (deposit `0x1f1678a3…`, withdraw `0x92d8ec03…`, both `(ok ...)` on-chain
-despite the explorer UI showing "Failed" for both -- same known explorer
-quirk as the Zest pair, not a real failure; see "App UI status" below).
+despite the explorer UI showing "Failed" for both when viewed via BitYield's
+own "watch it confirm" link at the time -- a real bug (missing "0x" prefix
+on the txid in that link), root-caused and fixed; see "Explorer link bug"
+below).
 Withdraw returned exactly the deposited amount, as expected: the strategy
 was never enrolled, so there was nothing to earn.
 
@@ -390,6 +392,42 @@ the original incident but its own withdraw path has not yet had a full
 real-fund confirmation either (see "Zest incident" above) -- that is the
 recommended immediate test (see app UI status below), independent of and
 simpler than the v3 oracle-dynamic work.
+
+## Explorer link bug: root cause and fix (2026-08-13)
+
+The "watch it confirm on the explorer" link on `/deposit` and `/withdraw`
+showed Hiro's explorer rendering genuinely successful BitYield transactions
+as "Failed" (or a flat 404, "could not find transaction by ID"). An earlier
+pass misdiagnosed this as a Hiro-side rendering quirk specific to sponsored
+transactions and shipped a caveat message instead of a real fix -- **that
+diagnosis was wrong.**
+
+**Actual root cause, found by directly comparing a broken link against a
+manually corrected one**: `@stacks/transactions`' `broadcastTransaction()`
+returns the raw Stacks node RPC response body, which is the bare hex txid
+with **no `0x` prefix** (confirmed in `fetch.js`: `text.replace(/["]+/g, '')`
+strips quotes but never adds `0x`). `app/api/sponsor-tx/route.ts` passed
+this bare txid straight through, and `lib/stacks/network.ts`'s
+`explorerTxUrl` interpolated it directly into the URL with no normalization
+-- producing a link like `.../txid/e79cd72a...` instead of
+`.../txid/0xe79cd72a...`. Hiro's explorer either 404s on the malformed id or
+renders a false "Failed" badge for it; the transaction itself was correct
+and successful the whole time.
+
+This explains why only the deposit/withdraw confirming-flow link was ever
+affected, and why the Dashboard and Proof page links looked fine: both of
+those source their txids from Hiro's own indexer API (`tx_id` field on
+`GET /extended/v1/tx/...` and search results), which always includes `0x`.
+Only the raw broadcast-response path -- used solely by the sponsored
+deposit/withdraw flow -- was missing it.
+
+**Fix**: `explorerTxUrl` in `lib/stacks/network.ts` now normalizes
+(`txid.startsWith('0x') ? txid : `0x${txid}``) regardless of source
+formatting. The Dashboard and Proof pages each had their own duplicate local
+copy of this function; both now import the single normalized one instead.
+The inaccurate "explorer badge is known to mislabel sponsored transactions"
+caveat text was removed from `TransactionStatus.tsx` since the actual bug is
+fixed, not papered over.
 
 ## App UI status (2026-08-13)
 

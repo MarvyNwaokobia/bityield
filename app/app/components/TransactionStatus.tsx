@@ -123,12 +123,6 @@ export function PendingCard({
           >
             Watch it confirm on the explorer ↗
           </a>
-          <p className="text-zinc-600 text-xs mt-1.5 max-w-xs mx-auto leading-relaxed">
-            BitYield sponsors your network fee, and the explorer&rsquo;s status badge is known to
-            mislabel sponsored transactions as &ldquo;Failed&rdquo; even when they succeed. Everything
-            else there (amounts, addresses, block) is accurate, just not that badge. Trust this page:
-            it only says done once your transaction is genuinely final.
-          </p>
         </div>
       )}
 

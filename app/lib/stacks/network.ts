@@ -89,9 +89,16 @@ export function explorerContractUrl(contractId: string): string {
 
 // Hiro explorer link for a transaction id, so users can watch their own
 // deposit/withdraw confirm on-chain in real time.
+//
+// @stacks/transactions' broadcastTransaction() returns the raw node response
+// body, which is the bare hex txid with NO "0x" prefix (unlike the Hiro
+// indexer API's tx_id field, which always includes it). A bare-hex URL either
+// 404s or renders Hiro's explorer as "Failed" even for a genuinely successful
+// transaction, so this must always normalize to a "0x"-prefixed id.
 export function explorerTxUrl(txid: string): string {
   const chain = NETWORK_NAME === "mainnet" ? "mainnet" : "testnet";
-  return `https://explorer.hiro.so/txid/${txid}?chain=${chain}`;
+  const normalized = txid.startsWith('0x') ? txid : `0x${txid}`;
+  return `https://explorer.hiro.so/txid/${normalized}?chain=${chain}`;
 }
 
 // Resolves a strategy name to the deployed contract id, or null if unset.
