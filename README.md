@@ -20,26 +20,30 @@ confirm — with every transaction's STX fee sponsored so users never need to
 hold STX. The full flow is live and verifiable on-chain (see the demo
 transactions under [v0.1 — Stacks Endowment](#v01--stacks-endowment)).
 
-**What v0.1 delivers vs. what comes next:** v0.1 delivers the end-to-end
-**deposit flow** — wallet, balance, yield opportunity, risk review, sponsored
-confirmation, on-chain position. v0.2 delivers the **live yield source** —
-routing deposits into real protocol yield (starting with Zest) instead of the
-fixed, admin-set preview rate. The contracts are unaudited and owner-controlled
-by a single key today; a public launch is gated on the v0.2 audit and a
-multisig owner (see [Roadmap](#roadmap)).
+**v0.1** delivered the end-to-end **deposit flow** — wallet, balance, yield
+opportunity, risk review, sponsored confirmation, on-chain position — and was
+approved by the Stacks Endowment. **v0.2 is now live**: real routing into Zest
+Protocol lending, deployed on Bitcoin mainnet under a fresh, isolated deployer.
+Dual Stacking routing is deployed but not yet dust-tested. The contracts are
+unaudited and owner-controlled by a single key today; a public launch is
+gated on an independent audit and a multisig owner (see [Roadmap](#roadmap)).
 
-- `YieldRouter` (mainnet):
-  [`SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router`](https://explorer.hiro.so/address/SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN?chain=mainnet)
+- `YieldRouter` (mainnet, v0.2):
+  [`SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.yield-router`](https://explorer.hiro.so/address/SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB?chain=mainnet)
 - Router points at the canonical mainnet sBTC token
-  (`SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`); deposit → position
-  → withdraw and the fee-sponsorship pipeline were verified end-to-end on
-  testnet with real sBTC before the mainnet deploy.
-- **Honest scope:** the yield strategies (Zest / Hermetica / Dual Stacking) are
-  currently **BitYield's own strategy contracts**, each paying a fixed,
-  admin-set APY. They *model* the target protocols but do not route to them
-  yet — live protocol integration (starting with **Zest**) is v0.2. The
-  app labels these "Preview" and links each strategy contract on the explorer
-  so anyone can verify exactly what it does. See [Roadmap](#roadmap).
+  (`SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token`).
+- **Live routing:** the `zest` strategy (`zest-strategy-live-v2`) routes real
+  sBTC into Zest Protocol lending. A first mainnet dust test surfaced a real
+  lesson (Zest rotated its price oracle mid-project, and the earlier contract
+  version hardcoded the old one, permanently stranding a small test amount);
+  full incident writeup and the current mitigation approach are in
+  `docs/m2-testing-guide.md`. The `dual-stacking` strategy
+  (`dual-stacking-strategy-live`) is deployed and registered, not yet
+  dust-tested. `hermetica` remains a **preview** strategy (fixed admin-set
+  APY, does not route to a real protocol) — see [Roadmap](#roadmap).
+- The v0.1 router (`SP360GQARJRHQEFBW21RP957MC8YPJYHYJQTPKVFN.yield-router`)
+  and its preview strategies remain live and untouched; they are not part of
+  v0.2 routing.
 
 See [Deployment](#deployment) below and `contracts/DEPLOYMENT.md` for the full
 deploy + verification details.
@@ -198,9 +202,9 @@ Frontend pages:
 | Leather Wallet (leather.io)                 | Wallet + sBTC bridge link     | **Live** (SDK)         |
 | Hiro Systems (hiro.so)                      | Stacks.js, API, Clarinet      | **Live** (infra)       |
 | sBTC (stacks.co/sbtc)                       | 1:1 Bitcoin-backed deposit asset | **Live** (mainnet token) |
-| Zest Protocol (zestprotocol.com)            | Primary lending yield         | Roadmap — v0.2         |
+| Zest Protocol (zestprotocol.com)            | Primary lending yield         | **Live** (v0.2, mainnet) |
+| Dual Stacking (stacks.co)                   | PoX yield                     | Deployed, dust-testing pending |
 | Hermetica (hermetica.fi)                    | Structured BTC yield          | Roadmap                |
-| Dual Stacking (stacks.co)                   | PoX yield                     | Roadmap                |
 | Circle USDCx / Bitflow                      | Stablecoin yield path         | Future track           |
 
 ---

@@ -187,3 +187,59 @@ least once (v1-4 -> v1-6) during this project's lifetime.
 - Validate Zest `get-apy` raw-rate → percent conversion against the deployed
   contract, then wire the live APY display.
 - Write the route-specific risk copy and flip the "Preview" framing to live.
+
+## Oracle-dynamic redesign (2026-08-13): in progress, NOT deployed
+
+To prevent the Zest incident's exact failure mode (an oracle rotation
+permanently stranding funds in an immutable contract), the withdraw interface
+was extended so Zest's oracle contract is supplied fresh by the caller at
+withdraw time, instead of hardcoded. Local-only so far, not deployed.
+
+**Design:**
+- New `contracts/oracle-trait.clar`, defined locally (same rationale as
+  `sip-010-trait.clar`), matching Zest's own `oracle-trait` shape.
+- `yield-strategy-trait.withdraw` and `yield-router.withdraw` both gained an
+  `<oracle-trait>` argument, threaded through exactly like `price-feed-bytes`.
+  All 6 strategy contracts updated to accept it (non-Zest strategies ignore it).
+- `zest-strategy-live`'s TOP-LEVEL oracle argument (the one that actually broke:
+  Zest's `(asserts! (is-eq (contract-of oracle) (get oracle reserve-state))
+  ERR_INVALID_ORACLE)`) is now caller-supplied. A future rotation of *this*
+  check is a parameter update, not a redeploy.
+- The `assets` list's four entries that also reference the STX/BTC oracle
+  (ststx, wstx, sbtc, ststxbtc) remain hardcoded literals. This is a genuine
+  Clarity limitation, not a choice: a trait-typed parameter can be passed as a
+  bare function argument, but cannot be embedded as a value inside a
+  tuple/list literal built in contract code (confirmed by compiling: fails
+  with a `CallableType(Trait)`/`PrincipalType` mismatch). Making those dynamic
+  too would require the caller to supply the entire 10-entry `assets` list as
+  a raw transaction argument, pushing Zest's specific structure into the
+  shared trait -- a much bigger change, not done.
+- Local production test suite (5/5) passes with a `mock-oracle.clar` added for
+  the self-contained project.
+- Compiles and deploys against a mainnet fork as `zest-strategy-live-v3`.
+
+**BLOCKING ISSUE, discovered via mainnet-fork testing, NOT YET RESOLVED:** a
+funded deposit + withdraw attempt, passing the real
+`stx-btc-oracle-v1-6` contract as the dynamic `<oracle-trait>` argument,
+failed with `MaxStackDepthReached` deep inside Zest's own health-factor
+calculation chain. Confirmed via the actual stacks-core Rust source
+(`clarity-types/src/lib.rs`) that this is a REAL PROTOCOL-LEVEL limit
+(`MAX_CALL_STACK_DEPTH = 128` in current epochs, `= 64` legacy), not a
+simulator artifact. The same call chain worked fine with a LITERAL oracle
+argument (proven repeatedly in earlier tests); dynamic trait dispatch appears
+to add real stack frames at each contract boundary the trait value crosses
+(router -> strategy -> Zest's own deeply-nested internal calls), and Zest's
+own logic is already close to the ceiling.
+
+**Open question, not yet answered:** does this fail on REAL mainnet too, or
+only in the fork simulator (e.g. if the fork's effective epoch uses the
+legacy 64-limit while real mainnet is on the 128-limit with more headroom)?
+Unknown without a real mainnet test.
+
+**DO NOT DEPLOY this design until resolved.** `zest-strategy-live-v2` (hardcoded
+oracle, the currently live, correctly-configured contract) remains the
+production strategy. Next steps to resolve: (a) confirm whether real mainnet
+hits the same limit (would require a real dust transaction using this exact
+call pattern), or (b) reduce the number of contract-boundary crossings the
+oracle trait threads through (e.g. inlining `redeem-and-forward`, or a leaner
+call path), which needs more design work.
