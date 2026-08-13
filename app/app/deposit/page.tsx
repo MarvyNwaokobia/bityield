@@ -18,22 +18,41 @@ import { StrategyName, SBTC_ACQUIRE_URL, NETWORK_NAME, explorerContractUrl, expl
 
 type Step = 'amount' | 'confirm' | 'pending' | 'success' | 'error';
 
+type RouteStatus = 'live' | 'deployed' | 'preview';
+
 interface StrategyOption {
   id: StrategyName;
   name: string;
   apy: number;
   targetProtocol: string;
   risk: 'Low' | 'Medium';
+  status: RouteStatus;
   desc: string;
+  riskNote: string;
 }
 
-// Honest descriptions: these are BitYield's own strategy contracts today, each
-// paying a fixed APY. They model the target protocols but do not route to them
-// yet. Live integration is v0.2. See the Risk & disclosures panel on confirm.
+// Honest, per-route status: 'live' routes real sBTC into the named protocol on
+// Bitcoin mainnet today. 'deployed' means the live contract is on mainnet and
+// registered, but has not yet completed a full real-fund test. 'preview' means
+// BitYield's own strategy contract paying a fixed, admin-set APY, modelling
+// the target protocol without routing to it. See the Risk & disclosures panel
+// on confirm for the route-specific detail.
 const STRATEGY_OPTIONS: StrategyOption[] = [
-  { id: 'zest', name: 'Zest Lending', apy: 4.5, targetProtocol: 'Zest Protocol', risk: 'Low', desc: 'Models Zest lending yield. Today a BitYield strategy contract paying a fixed 4.5% APY. Live Zest routing ships in v0.2.' },
-  { id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY. Live routing ships in v0.2.' },
-  { id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', desc: 'Models Dual Stacking PoX yield. Today a BitYield strategy contract paying a fixed 8.5% APY. Live routing ships in v0.2.' }
+  {
+    id: 'zest', name: 'Zest Lending', apy: 4.5, targetProtocol: 'Zest Protocol', risk: 'Low', status: 'live',
+    desc: 'Routes your sBTC into real Zest Protocol lending on Bitcoin mainnet. The rate shown is indicative, not yet a live read of Zest’s current rate.',
+    riskNote: 'This route is live on Bitcoin mainnet: your deposit is actually supplied into Zest Protocol’s lending pool. It is a new deployment, unaudited, and has had limited real-world testing so far — deposit only a small amount you are comfortable testing with.',
+  },
+  {
+    id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', status: 'preview',
+    desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY. Live routing is on the roadmap.',
+    riskNote: 'Preview strategy. Hermetica Structured is a BitYield strategy contract paying a fixed 6.2% APY. It models Hermetica but does not route to it yet; the rate is set by the contract, not live market yield.',
+  },
+  {
+    id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', status: 'deployed',
+    desc: 'Enrolls your sBTC in the Stacks network’s own Dual Stacking rewards program. Deployed on mainnet; a full real-fund test of this route has not completed yet.',
+    riskNote: 'This route’s contract is live on Bitcoin mainnet and enrolls your sBTC in the real Dual Stacking program, but BitYield has not yet completed a full deposit-and-withdraw test through it — deposit only a small amount you are comfortable testing with.',
+  },
 ];
 
 export default function DepositPage() {
@@ -279,8 +298,14 @@ export default function DepositPage() {
                                 }`}>
                                   {opt.risk} Risk
                                 </span>
-                                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider bg-zinc-500/10 text-zinc-400 border border-zinc-500/20">
-                                  Preview
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                                  opt.status === 'live'
+                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                    : opt.status === 'deployed'
+                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
+                                }`}>
+                                  {opt.status === 'live' ? 'Live' : opt.status === 'deployed' ? 'Deployed' : 'Preview'}
                                 </span>
                               </div>
                               <p className="text-xs text-zinc-500 leading-snug">{opt.desc}</p>
@@ -298,7 +323,9 @@ export default function DepositPage() {
                             </div>
                             <div className="text-right">
                               <span className="font-display text-lg font-bold text-bitcoin whitespace-nowrap">{opt.apy}% APY</span>
-                              <p className="text-[10px] text-zinc-500 uppercase tracking-widest">Models {opt.targetProtocol}</p>
+                              <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
+                                {opt.status === 'preview' ? 'Models' : 'Routes to'} {opt.targetProtocol}
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -400,9 +427,10 @@ export default function DepositPage() {
                   </p>
                   <ul className="text-xs text-zinc-400 space-y-2 leading-relaxed list-disc pl-4">
                     <li>
-                      <span className="text-zinc-300 font-medium">Preview strategy.</span> {selectedStrategyOption.name} is
-                      a BitYield strategy contract paying a fixed {apy}% APY. It models {selectedStrategyOption.targetProtocol} but
-                      does not route to it yet. Live protocol integration is planned for v0.2. The rate is set by the contract, not live market yield.
+                      <span className="text-zinc-300 font-medium">
+                        {selectedStrategyOption.status === 'live' ? 'Live route.' : selectedStrategyOption.status === 'deployed' ? 'Deployed, untested route.' : 'Preview strategy.'}
+                      </span>{' '}
+                      {selectedStrategyOption.riskNote}
                     </li>
                     <li>
                       <span className="text-zinc-300 font-medium">Custody.</span> Your sBTC is transferred to the strategy
