@@ -17,41 +17,53 @@ clarity_version = 2
 epoch = 2.5
 depends_on = ["sip-010-trait"]
 
+[contracts.oracle-trait]
+path = "contracts/oracle-trait.clar"
+clarity_version = 2
+epoch = 2.5
+depends_on = ["sip-010-trait"]
+
 [contracts.yield-strategy-trait]
 path = "contracts/yield-strategy-trait.clar"
 clarity_version = 2
 epoch = 2.5
-depends_on = ["sip-010-trait"]
+depends_on = ["sip-010-trait", "oracle-trait"]
+
+[contracts.mock-oracle]
+path = "contracts/mock-oracle.clar"
+clarity_version = 2
+epoch = 2.5
+depends_on = ["oracle-trait", "sip-010-trait"]
 
 [contracts.mock-yield-strategy]
 path = "contracts/mock-yield-strategy.clar"
 clarity_version = 2
 epoch = 2.5
-depends_on = ["yield-strategy-trait", "sip-010-trait"]
+depends_on = ["yield-strategy-trait", "sip-010-trait", "oracle-trait"]
 
 [contracts.zest-strategy]
 path = "contracts/zest-strategy.clar"
 clarity_version = 2
 epoch = 2.5
-depends_on = ["yield-strategy-trait", "sip-010-trait"]
+depends_on = ["yield-strategy-trait", "sip-010-trait", "oracle-trait"]
 
 [contracts.hermetica-strategy]
 path = "contracts/hermetica-strategy.clar"
 clarity_version = 2
 epoch = 2.5
-depends_on = ["yield-strategy-trait", "sip-010-trait"]
+depends_on = ["yield-strategy-trait", "sip-010-trait", "oracle-trait"]
 
 [contracts.dual-stacking-strategy]
 path = "contracts/dual-stacking-strategy.clar"
 clarity_version = 2
 epoch = 2.5
-depends_on = ["yield-strategy-trait", "sip-010-trait"]
+depends_on = ["yield-strategy-trait", "sip-010-trait", "oracle-trait"]
 
 [contracts.yield-router]
 path = "contracts/yield-router.clar"
 clarity_version = 2
 epoch = 2.5
-depends_on = ["sip-010-trait", "yield-strategy-trait"]
+depends_on = ["sip-010-trait", "yield-strategy-trait", "oracle-trait"]
 
 [repl.analysis]
 passes = ["check_checker"]

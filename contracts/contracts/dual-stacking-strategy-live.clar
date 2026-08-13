@@ -20,6 +20,7 @@
 
 (impl-trait .yield-strategy-trait.yield-strategy-trait)
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
+(use-trait oracle-trait .oracle-trait.oracle-trait)
 
 ;; ~0.5% base sBTC rate; the boosted rate (up to ~5% with STX stacked) is read
 ;; live from the program for display. get-apy is informational only: real payout
@@ -54,13 +55,14 @@
 ;; Withdraw: pay back principal plus this position's pro-rata share of accrued
 ;; rewards. reward-share = amount / total-principal * (balance - total-principal).
 ;; NOTE: pro-rata by principal, not time-weighted; a time-weighted refinement is
-;; a follow-up. price-feed-bytes is unused (Dual Stacking needs no oracle).
+;; a follow-up. oracle and price-feed-bytes are unused (Dual Stacking needs no oracle).
 (define-public (withdraw
     (amount uint)
     (recipient principal)
     (entry-block uint)
     (apy-bps uint)
     (token <sip-010-trait>)
+    (oracle <oracle-trait>)
     (price-feed-bytes (optional (buff 8192)))
   )
   (begin

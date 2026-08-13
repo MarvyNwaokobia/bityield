@@ -28,3 +28,5 @@ costs-reports.json
 /Clarinet.m2deploy.toml
 /Clarinet.m2deploy2.toml
 /.cache_deploy*
+/Clarinet.zest3design.toml
+/.cache_oracledesign

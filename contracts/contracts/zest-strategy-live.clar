@@ -10,12 +10,25 @@
 ;;   borrow-helper-v2-1-7  supply / withdraw wrapper (guarded by tx-sender==contract-caller)
 ;;   zsbtc-v2-0            sBTC receipt token (lp), accrues to this strategy
 ;;   pool-0-reserve-v2-0   reserve + user state
-;;   stx-btc-oracle-v1-6   sBTC oracle (Zest rotated from v1-4 to v1-6 as of 2026-08-13)
 ;;   incentives-v2-2       rewards contract
 ;; sBTC: SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
+;;
+;; ORACLE IS CALLER-SUPPLIED, NOT HARDCODED. Zest rotated the sBTC reserve's
+;; oracle once already (stx-btc-oracle-v1-4 -> v1-6, discovered 2026-08-13 when
+;; a prior version of this contract, which hardcoded v1-4, got permanently stuck
+;; holding dust: Zest's withdraw rejects a mismatched oracle, and Zest's zsBTC
+;; token cannot be moved out by an unapproved contract, so an immutable wrong
+;; hardcoded oracle means unrecoverable funds). To survive future rotations
+;; without a redeploy, the oracle contract is passed in fresh on every withdraw
+;; (see yield-strategy-trait.withdraw's <oracle-trait> argument), the same way
+;; price-feed-bytes already is. The caller (frontend, ultimately the router) is
+;; responsible for supplying Zest's current oracle; read it live from
+;; pool-0-reserve-v2-0.get-reserve-state before submitting, never hardcode it
+;; client-side either.
 
 (impl-trait .yield-strategy-trait.yield-strategy-trait)
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
+(use-trait oracle-trait .oracle-trait.oracle-trait)
 
 (define-constant ERR-NOT-OWNER (err u200))
 (define-constant ERR-NOT-ROUTER (err u201))
@@ -64,11 +77,35 @@
 
 ;; Private: redeem `redeem-amount` sBTC from Zest and forward the measured balance
 ;; delta to `recipient`. sBTC is hardcoded (this strategy only ever holds sBTC),
-;; so no trait needs threading through. Shared by the router withdraw and the
-;; owner emergency redeem.
+;; so no trait needs threading through for the asset itself. `oracle` is the
+;; caller-supplied current STX/BTC oracle (see file header), used as the
+;; TOP-LEVEL oracle argument -- this is exactly the check that broke in the
+;; 2026-08-13 incident (Zest's `(asserts! (is-eq (contract-of oracle)
+;; (get oracle reserve-state)) ERR_INVALID_ORACLE)`), so making it caller-
+;; supplied directly fixes that failure mode: a future rotation is a parameter
+;; update, not a redeploy.
+;;
+;; The `assets` list below still hardcodes each entry's oracle as a literal,
+;; INCLUDING the four (ststx, wstx, sbtc, ststxbtc) that share the same
+;; STX/BTC oracle as the top-level argument. This is a real Clarity limitation,
+;; not a choice: a trait-typed parameter can be passed as a bare function
+;; argument, but cannot be embedded as a value inside a tuple/list literal
+;; constructed in contract code (confirmed by compiling this design: attempting
+;; `oracle: oracle` inside these tuples fails with a
+;; CallableType(Trait)/PrincipalType mismatch). Making the assets-list oracles
+;; dynamic too would require the caller to supply the entire `assets` list as a
+;; raw transaction argument (trait-typed tuple fields can only be supplied at
+;; the top-level transaction, not constructed mid-call), which would push
+;; Zest's full 10-asset structure into the shared yield-strategy-trait
+;; interface -- a much bigger change. Deferred: today's incident was
+;; specifically the top-level check, not these entries, so this scope matches
+;; the actual failure observed. If one of these entries' oracles ever rotates
+;; independently, it needs a redeploy, same as before this change.
+;; Shared by the router withdraw and the owner emergency redeem.
 (define-private (redeem-and-forward
     (redeem-amount uint)
     (recipient principal)
+    (oracle <oracle-trait>)
     (price-feed-bytes (optional (buff 8192)))
   )
   (let (
@@ -79,7 +116,7 @@
         'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0            ;; lp
         'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.pool-0-reserve-v2-0   ;; pool-reserve
         'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token          ;; asset
-        'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.stx-btc-oracle-v1-6   ;; oracle
+        oracle                                                         ;; oracle (caller-supplied)
         redeem-amount
         (as-contract tx-sender)                                        ;; owner = self
         ;; assets: MUST list every Zest reserve asset, in registry order, for
@@ -121,6 +158,7 @@
     (entry-block uint)
     (apy-bps uint)
     (token <sip-010-trait>)
+    (oracle <oracle-trait>)
     (price-feed-bytes (optional (buff 8192)))
   )
   (begin
@@ -130,7 +168,7 @@
         (total-value (unwrap! (contract-call? 'SP2VCQJGH7PHP2DJK7Z0V48AGBHQAW3R3ZW1QF4N.zsbtc-v2-0 get-balance (as-contract tx-sender)) ERR-BALANCE-READ))
         (redeem-amount (if (> principal-total u0) (/ (* amount total-value) principal-total) amount))
       )
-      (let ((received (try! (redeem-and-forward redeem-amount recipient price-feed-bytes))))
+      (let ((received (try! (redeem-and-forward redeem-amount recipient oracle price-feed-bytes))))
         ;; Reduce tracked principal by this position's principal (not redeem-amount,
         ;; which includes its interest share). Clamp to avoid underflow.
         (var-set total-principal (if (>= principal-total amount) (- principal-total amount) u0))
@@ -170,11 +208,12 @@
 (define-public (owner-emergency-zest-redeem
     (amount uint)
     (recipient principal)
+    (oracle <oracle-trait>)
     (price-feed-bytes (optional (buff 8192)))
   )
   (begin
     (asserts! (is-owner) ERR-NOT-OWNER)
-    (redeem-and-forward amount recipient price-feed-bytes)
+    (redeem-and-forward amount recipient oracle price-feed-bytes)
   )
 )
 

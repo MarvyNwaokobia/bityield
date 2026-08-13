@@ -5,6 +5,7 @@
 
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
 (use-trait yield-strategy-trait .yield-strategy-trait.yield-strategy-trait)
+(use-trait oracle-trait .oracle-trait.oracle-trait)
 
 (define-constant CONTRACT-OWNER tx-sender)
 (define-constant BLOCKS-PER-YEAR u52560) ;; ~10 minute block time
@@ -89,7 +90,7 @@
   )
 )
 
-(define-public (withdraw (position-id uint) (strategy <yield-strategy-trait>) (token <sip-010-trait>) (price-feed-bytes (optional (buff 8192))))
+(define-public (withdraw (position-id uint) (strategy <yield-strategy-trait>) (token <sip-010-trait>) (oracle <oracle-trait>) (price-feed-bytes (optional (buff 8192))))
   (let (
       (caller tx-sender)
       (pos (unwrap! (map-get? positions { owner: tx-sender, position-id: position-id }) ERR-NOT-FOUND))
@@ -103,7 +104,7 @@
 
     ;; Delegate withdrawal and payout calculations to the strategy contract
     (let (
-        (payout (try! (contract-call? strategy withdraw (get amount pos) caller (get entry-block pos) (get apy-bps pos) token price-feed-bytes)))
+        (payout (try! (contract-call? strategy withdraw (get amount pos) caller (get entry-block pos) (get apy-bps pos) token oracle price-feed-bytes)))
       )
       (map-set positions { owner: caller, position-id: position-id } (merge pos { closed: true }))
       (ok payout)

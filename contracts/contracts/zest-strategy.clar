@@ -4,6 +4,7 @@
 
 (impl-trait .yield-strategy-trait.yield-strategy-trait)
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
+(use-trait oracle-trait .oracle-trait.oracle-trait)
 
 (define-constant CONTRACT-OWNER tx-sender)
 (define-constant BLOCKS-PER-YEAR u52560)
@@ -28,7 +29,7 @@
   )
 )
 
-(define-public (withdraw (amount uint) (recipient principal) (entry-block uint) (apy-bps uint) (token <sip-010-trait>) (price-feed-bytes (optional (buff 8192))))
+(define-public (withdraw (amount uint) (recipient principal) (entry-block uint) (apy-bps uint) (token <sip-010-trait>) (oracle <oracle-trait>) (price-feed-bytes (optional (buff 8192))))
   (begin
     (asserts! (is-authorized-router) ERR-NOT-ROUTER)
     (let (

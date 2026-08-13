@@ -11,6 +11,7 @@ const MOCK_STRATEGY = `${deployer}.mock-yield-strategy`;
 const ZEST_STRATEGY = `${deployer}.zest-strategy`;
 const HERMETICA_STRATEGY = `${deployer}.hermetica-strategy`;
 const DUAL_STRATEGY = `${deployer}.dual-stacking-strategy`;
+const MOCK_ORACLE = `${deployer}.mock-oracle`;
 const ONE_SBTC = 100_000_000; // 1 sBTC == 1e8 sats
 
 function mint(amount: number, recipient: string) {
@@ -159,7 +160,7 @@ describe("yield-router", () => {
     const zestWithdraw = simnet.callPublicFn(
       "yield-router",
       "withdraw",
-      [Cl.uint(Number(zestPosId)), Cl.principal(ZEST_STRATEGY), Cl.principal(TOKEN), Cl.none()],
+      [Cl.uint(Number(zestPosId)), Cl.principal(ZEST_STRATEGY), Cl.principal(TOKEN), Cl.principal(MOCK_ORACLE), Cl.none()],
       wallet2
     );
     // Hermetica payout: 50,000,000 * 620 * 52566 / 525600000 = 3,100,353 sats yield. Payout = 53,100,353
@@ -167,7 +168,7 @@ describe("yield-router", () => {
     const hermeticaWithdraw = simnet.callPublicFn(
       "yield-router",
       "withdraw",
-      [Cl.uint(Number(hermeticaPosId)), Cl.principal(HERMETICA_STRATEGY), Cl.principal(TOKEN), Cl.none()],
+      [Cl.uint(Number(hermeticaPosId)), Cl.principal(HERMETICA_STRATEGY), Cl.principal(TOKEN), Cl.principal(MOCK_ORACLE), Cl.none()],
       wallet2
     );
     expect(hermeticaWithdraw.result).toStrictEqual(Cl.ok(Cl.uint(53_100_353)));
@@ -177,7 +178,7 @@ describe("yield-router", () => {
     const dualWithdraw = simnet.callPublicFn(
       "yield-router",
       "withdraw",
-      [Cl.uint(Number(dualPosId)), Cl.principal(DUAL_STRATEGY), Cl.principal(TOKEN), Cl.none()],
+      [Cl.uint(Number(dualPosId)), Cl.principal(DUAL_STRATEGY), Cl.principal(TOKEN), Cl.principal(MOCK_ORACLE), Cl.none()],
       wallet2
     );
     expect(dualWithdraw.result).toStrictEqual(Cl.ok(Cl.uint(54_250_485)));
