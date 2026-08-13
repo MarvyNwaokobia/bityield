@@ -1,11 +1,10 @@
 # Milestone 2 Testing and Deploy Guide (handoff)
 
-Status as of 2026-08-12: **M1 approved; M2 DEPLOYED TO MAINNET and configured.**
-The router + both live strategies are live under a fresh deployer, the router is
-configured (sBTC set, both strategies registered + active), the Zest strategy is
-funded with 1 STX for Pyth fees, and `app/.env.local` points at the new addresses.
-REMAINING: the dust deposit/withdraw test per route (the withdraw path is still
-unproven end to end on mainnet), and the Dual Stacking Stacks-team confirmation.
+Status as of 2026-08-13: **M1 approved; M2 DEPLOYED TO MAINNET, configured, and live
+on bityield.click.** Zest route hit a real issue during the first dust test
+(Zest rotated an oracle contract), which was diagnosed, fixed, and redeployed;
+Dual Stacking has not been dust-tested yet. See "Zest incident" below for the
+full story, including a small unrecoverable dust loss and a design lesson.
 See also `docs/milestone-2-plan.md` for the full design and evidence.
 
 ## Deployed M2 contracts (mainnet)
@@ -18,14 +17,63 @@ Deployer / owner: `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB` (fresh, isolated).
 | `SP37FXV5….yield-strategy-trait` | `0xf6abb496…be82cf5a` |
 | `SP37FXV5….sip-010-trait` | `0x86ec0b02…64e8795` |
 | `SP37FXV5….mock-sbtc-token` | `0x9b752683…dc57a732` |
-| `SP37FXV5….zest-strategy-live` | `0xae20ad6f…6c9c583649` |
+| `SP37FXV5….zest-strategy-live` (SUPERSEDED, see incident) | `0xae20ad6f…6c9c583649` |
+| `SP37FXV5….zest-strategy-live-v2` (CURRENT) | `0x3dcce3b1…36a6e2a11` |
 | `SP37FXV5….dual-stacking-strategy-live` | `0x8e48dd90…b43744aaa` |
 
 Post-deploy config (all confirmed success):
 - `set-sbtc-token` -> `SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token` (`0x1c75cd5f…c1a32fb`)
-- `add-strategy "zest"` -> `zest-strategy-live` (`0xcc8a8734…a99eae11`)
+- `add-strategy "zest"` -> `zest-strategy-live` (`0xcc8a8734…a99eae11`), later repointed to
+  `zest-strategy-live-v2` (`0x69206d33…0406f515e5e4`) -- see incident below
 - `add-strategy "dual-stacking"` -> `dual-stacking-strategy-live` (`0x8e853d92…1eff1467`)
-- funded `zest-strategy-live` with 1 STX for Pyth fees (`0x6cbe8e1f…480f22c`)
+- funded `zest-strategy-live` with 1 STX for Pyth fees (`0x6cbe8e1f…480f22c`); funded
+  `zest-strategy-live-v2` likewise (`0xc04d329e…f79f388b60b8ab`)
+
+## Zest incident: oracle rotation, dust loss, redeploy (2026-08-13)
+
+First real mainnet dust test on Zest (via bityield.click, test wallet
+`SP2JS7…PJT3`):
+- **Deposit succeeded**: `0xee763c65…9e2b93147`, 1000 sats (0.00001 sBTC) supplied
+  into Zest through `zest-strategy-live`, confirmed on-chain.
+- **Withdraw reverted**: `0x3b042433…d13eda027`, `(err u30010)` =
+  `ERR_INVALID_ORACLE`. Root cause: Zest rotated the sBTC reserve's oracle from
+  `stx-btc-oracle-v1-4` (what was verified during design/spike) to
+  `stx-btc-oracle-v1-6` sometime after that verification. Our strategy hardcoded
+  the old oracle. Confirmed live via `pool-0-reserve-v2-0.get-reserve-state`: all
+  four reserve entries that used `stx-btc-oracle-v1-4` (ststx, wstx, sbtc,
+  ststxbtc) now use `v1-6`. This was a stale external reference, not a logic bug;
+  the revert protected the funds as designed.
+- **Recovery attempt FAILED, dust is a permanent small loss (~1000 sats, ~$0.63).**
+  Tried: (1) `owner-sweep-ft` the zsBTC out to the deployer -> failed
+  `(err u14401)` `ERR_UNAUTHORIZED`, because zsBTC's own `transfer` gates on
+  `is-approved-contract`, a Zest-internal whitelist our strategy is not on (zsBTC
+  is NOT a freely transferable SIP-010 token in practice, despite implementing
+  the interface). (2) direct redeem from the deployer as a plain wallet -> failed
+  `(err u30002)` `ERR_NOT_ZERO`, a downstream consequence of (1) never having
+  moved any balance. With the sweep path closed and the old contract's oracle
+  hardcoded and immutable, there is no on-chain path left to extract this dust.
+  Txids: `0x7aaea132…761d7e3` (failed sweep), `0x0d78f672…8efb3dc8b` (failed
+  direct redeem).
+- **Fix + redeploy**: updated `contracts/zest-strategy-live.clar`, all 6
+  references of `stx-btc-oracle-v1-4` -> `stx-btc-oracle-v1-6`, compile-checked
+  against a mainnet fork (bumped fork height past the oracle's deploy block
+  8712357). Deployed as `zest-strategy-live-v2` (`0x3dcce3b1…36a6e2a11`), router
+  `"zest"` re-registered to it, funded 1 STX. `app/.env.local` and
+  bityield.click's production env updated to `zest-strategy-live-v2`.
+  **The old `zest-strategy-live` should be treated as retired**; do not deposit
+  into it again (it is no longer registered on the router, so the app cannot
+  route to it, but do not construct manual calls against it either).
+
+**Design lesson (not yet acted on, flag for a future decision):** the oracle
+principal is hardcoded as a literal inside `zest-strategy-live`'s Clarity source,
+even though Zest's own `borrow-helper-v2-1-7.withdraw` already accepts the
+oracle as a caller-supplied trait argument. Had it been threaded through as a
+parameter (the same pattern already used for `price-feed-bytes`), an oracle
+rotation would have been survivable by updating a parameter, not by losing funds
+in an immutable contract. Making this fully dynamic requires another
+trait/router interface change (bigger scope than the fix above). Worth deciding
+before scaling past dust amounts, since Zest has now rotated this oracle at
+least once (v1-4 -> v1-6) during this project's lifetime.
 
 ## Key accounts (mainnet)
 

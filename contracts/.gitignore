@@ -24,4 +24,7 @@ costs-reports.json
 /Clarinet.dual.toml
 /contracts/spike-zest-supplier.clar
 /deploy.log
+/deploy2.log
 /Clarinet.m2deploy.toml
+/Clarinet.m2deploy2.toml
+/.cache_deploy*
