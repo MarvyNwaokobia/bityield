@@ -121,10 +121,10 @@ SIP-010 sender check -- so `owner-sweep-ft` on `dual-stacking-strategy-live`
 would work as an escape hatch if it were ever needed, which it wasn't here.
 
 **Fix + retry**: funded the test wallet, deposited 10,000 sats via the app
-into Dual Stacking (`0xb1ac8579…a603661`, confirmed via post-conditions +
-API) and left it in (no withdraw). Called `enroll-in-program` from the
-deployer immediately after -- confirmed `success`, `(ok true)`
-(`0x100b7544…349caa36b`).
+into Dual Stacking (`0x7d76917a…5e5af6`, confirmed via post-conditions +
+API -- corrected here from an earlier mistranscribed txid) and left it in
+(no withdraw). Called `enroll-in-program` from the deployer immediately
+after -- confirmed `success`, `(ok true)` (`0x100b7544…349caa36b`).
 
 **Current state**: `dual-stacking-strategy-live` holds 10,000 sats principal,
 enrolled. Enrollment activates the *next* reward cycle (~2 weeks), not
