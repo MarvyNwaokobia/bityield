@@ -1,14 +1,22 @@
 ;; zest-strategy-live.clar
 ;;
-;; !!! NOT WHAT IS DEPLOYED. THIS FILE IS AHEAD OF MAINNET. !!!
-;; This is the in-progress "oracle-dynamic redesign" prototype (see
-;; docs/m2-testing-guide.md, "Oracle-dynamic redesign" — informally called
-;; zest-strategy-live-v3 there). It has NOT been deployed. The contract that
-;; is actually live on mainnet today, registered on the router as "zest", is
-;; a different (earlier, hardcoded-oracle) version — see the frozen,
-;; chain-verified snapshot at contracts/contracts/zest-strategy-live-v2.clar
-;; for what's really running. Do not treat anything in this file (including
-;; the withdraw signature below) as proof of live behavior.
+;; !!! CONFIRMED BLOCKED. DO NOT ATTEMPT TO DEPLOY THIS FILE. !!!
+;; This was the "oracle-dynamic redesign" prototype (see
+;; docs/m2-testing-guide.md, "Oracle-dynamic redesign: CONFIRMED BLOCKED, not
+;; deployable"). A real mainnet deploy attempt (2026-08-23) failed static
+;; analysis: Zest's own withdraw call chain forwards the oracle trait value
+;; three hops deep across separate real contracts (borrow-helper-v2-1-7 ->
+;; pool-borrow-v2-4 -> pool-0-reserve-v2-0), which is not analyzable when the
+;; oracle is a caller-supplied dynamic trait value instead of a hardcoded
+;; literal. This is a limitation of Zest's own contract architecture, not
+;; something fixable by restructuring this file. See the docs section above
+;; for the full diagnosis before spending more effort here.
+;;
+;; The contract actually live on mainnet today, registered on the router as
+;; "zest", is the hardcoded-oracle version; see the frozen, chain-verified
+;; snapshot at contracts/contracts/zest-strategy-live-v2.clar for what's
+;; really running -- and, per the above, what must keep running until Zest
+;; itself changes how their withdraw chain resolves the oracle.
 ;;
 ;; LIVE Zest lending strategy: routes real sBTC into Zest via as-contract.
 ;; Conforms to yield-strategy-trait. References Zest mainnet contracts confirmed
@@ -36,7 +44,7 @@
 ;; pool-0-reserve-v2-0.get-reserve-state before submitting, never hardcode it
 ;; client-side either.
 
-(impl-trait .yield-strategy-trait.yield-strategy-trait)
+(impl-trait .yield-strategy-trait-v2.yield-strategy-trait)
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
 (use-trait oracle-trait .oracle-trait.oracle-trait)
 
@@ -44,7 +52,7 @@
 (define-constant ERR-NOT-ROUTER (err u201))
 (define-constant ERR-BALANCE-READ (err u202))
 
-(define-data-var authorized-router principal .yield-router)
+(define-data-var authorized-router principal .yield-router-v2)
 ;; Owner (deployer) may repoint the router and trigger emergency recovery. This
 ;; is a single-key admin power for the controlled testing phase; a public launch
 ;; moves ownership to a multisig (see docs).

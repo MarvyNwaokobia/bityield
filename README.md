@@ -220,6 +220,23 @@ Frontend pages:
 | Hermetica (hermetica.fi)                    | Structured BTC yield          | Roadmap                |
 | Circle USDCx / Bitflow                      | Stablecoin yield path         | Future track           |
 
+### Integration checklist
+
+Before a new protocol route (or Hermetica moving from preview to live)
+counts as **live**, fill in a row here so reviewers can spot-check it
+without re-deriving the deploy history:
+
+| Field | Zest Protocol | Dual Stacking |
+|-------|---------------|----------------|
+| Contract addresses | Strategy: `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.zest-strategy-live-v2` | Strategy: `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.dual-stacking-strategy-live` |
+| Deploy tx | See [`contracts/DEPLOYMENT.md`](contracts/DEPLOYMENT.md) | See [`contracts/DEPLOYMENT.md`](contracts/DEPLOYMENT.md) |
+| Test deposit tx | [`0x121a7328…`](https://explorer.hiro.so/txid/0x121a7328b0bd3601d3dc74dbad8ec83fb9d5d32bbf56af9eee4089b4c6ff2a88?chain=mainnet) → withdraw [`0x7b909c7c…`](https://explorer.hiro.so/txid/0x7b909c7c6e8e9159659133ec61537f92e0fa93776c13731e675f8717d518be10?chain=mainnet) | [`0x1f1678a3…`](https://explorer.hiro.so/txid/0x1f1678a38673c9c8a75fe1cff2be888e344d7fe0030b072c87079b18925eef2f?chain=mainnet) → withdraw [`0x92d8ec03…`](https://explorer.hiro.so/txid/0x92d8ec03e8c28e21af6c8adc9bfdbabac5e50c801fe6b2f0b91103e502c064b2?chain=mainnet) |
+| Live rate source | Zest Protocol's own pool contract, read live on-chain | Stacks PoX / Dual Stacking rewards program, read live on-chain |
+
+Template for the next entry (copy this row when a new protocol goes live):
+
+`Protocol name | Contract addresses (strategy + any underlying protocol contract) | Deploy tx hash | Test deposit tx (+ withdraw) | Live rate source`
+
 ---
 
 ## v0.1 — deposit flow
@@ -280,7 +297,7 @@ shipped:
 | Route-specific protocol risk information | Per-route risk & disclosures panel on the deposit confirm screen (`/deposit`) |
 | Documentation | This README + [`docs/m2-testing-guide.md`](docs/m2-testing-guide.md) (full deploy record, incident history, testing checklist) + [`docs/milestone-2-plan.md`](docs/milestone-2-plan.md) (design) |
 | Transaction evidence | Table below, plus [`/proof`](https://bityield.click/proof) reading the live router straight from the chain |
-| Demo video | _(recording in progress)_ |
+| Demo video | [youtu.be/pK6zb4c5u3g](https://youtu.be/pK6zb4c5u3g) — both live routes end to end |
 
 **About the third route, Hermetica:** during this deployment a registration
 bug was found and fixed — `hermetica` had never been re-registered on the
@@ -425,7 +442,7 @@ deployer, so the live routes above must be set explicitly (`app/lib/stacks/netwo
 - [x] Route the `dual-stacking` strategy into the live **Dual Stacking** rewards program
 - [x] Read live APY from each protocol instead of a fixed rate, across the app
 - [ ] Dual Stacking's first live reward cycle, confirmed and withdrawn (pending; enrollment activates the cycle after next)
-- [ ] Demo video covering both live routes
+- [x] Demo video covering both live routes
 - [ ] Independent audit of the routing contracts before public launch
 - [ ] Move contract ownership to a multisig / cold wallet
 

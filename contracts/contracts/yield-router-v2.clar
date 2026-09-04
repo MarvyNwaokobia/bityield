@@ -1,10 +1,24 @@
-;; yield-router.clar
+;; yield-router-v2.clar
+;;
+;; FROZEN, CHAIN-VERIFIED SNAPSHOT -- this is the exact source of the contract
+;; deployed as SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.yield-router-v2
+;; (2026-08-23), pulled verbatim via `GET /v2/contracts/source/...` from
+;; api.mainnet.hiro.so. DO NOT EDIT (Clarity contracts are immutable; editing
+;; this file can't change what's live, only make the snapshot stop matching
+;; chain). NOT tracked in Clarinet.toml: it references `.yield-strategy-trait-v2`
+;; and `.oracle-trait`, deploy-specific names chosen only to avoid colliding
+;; with the OLD yield-router/yield-strategy-trait already on this deployer --
+;; see docs/m2-testing-guide.md, "Router registry fix: strategy-contract
+;; pinning". contracts/yield-router.clar is the actively-developed source
+;; (local-devnet names); this file is a historical record of one specific
+;; mainnet deploy, kept only because it currently has no strategy that can
+;; register on it -- see the docs section for why.
 ;;
 ;; Non-custodial routing + accounting layer for BitYield deposits.
 ;; Delegates actual deposit custody and yield generation to registered strategy contracts.
 
 (use-trait sip-010-trait .sip-010-trait.sip-010-trait)
-(use-trait yield-strategy-trait .yield-strategy-trait.yield-strategy-trait)
+(use-trait yield-strategy-trait .yield-strategy-trait-v2.yield-strategy-trait)
 (use-trait oracle-trait .oracle-trait.oracle-trait)
 
 (define-constant CONTRACT-OWNER tx-sender)

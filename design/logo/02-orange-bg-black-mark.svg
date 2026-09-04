@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="BitYield">
+  <defs>
+    <linearGradient id="g" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="64" y2="64">
+      <stop offset="0" stop-color="#fbaa42"/>
+      <stop offset="0.55" stop-color="#f7931a"/>
+      <stop offset="1" stop-color="#e8841a"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+
+  <g fill="#0a0a0a">
+    <!-- Stems: short-left/tall-right on top, reversed below, so the mark leans up-right. -->
+    <path d="M24 10h6v6h-6z"/>
+    <path d="M36 4h6v12h-6z"/>
+    <path d="M24 48h6v12h-6z"/>
+    <path d="M36 48h6v6h-6z"/>
+    <path d="M17 14h8v36h-8z"/>
+    <path d="M17 14h17.5a8.5 8.5 0 0 1 0 17H17z"/>
+    <path d="M17 31h20.5a9.5 9.5 0 0 1 0 19H17z"/>
+  </g>
+
+  <g fill="url(#g)">
+    <path d="M25 19h8.5a4.5 4.5 0 0 1 0 9H25z"/>
+    <path d="M25 34h9a5.5 5.5 0 0 1 0 11h-9z"/>
+  </g>
+</svg>

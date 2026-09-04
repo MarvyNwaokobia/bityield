@@ -448,3 +448,97 @@ program — risk note flags that reward payout itself isn't confirmed yet),
 Hermetica stays **Preview** (unchanged, no real routing). The risk &
 disclosures panel on the confirm screen is now dynamic per selected route
 rather than one fixed "preview" paragraph for all three.
+
+## Oracle-dynamic redesign: CONFIRMED BLOCKED, not deployable (2026-08-23)
+
+Follow-up to "Oracle-dynamic redesign" above. That section's "the depth
+question is answered, next step is a small real mainnet test" was too
+optimistic: the real mainnet test has now been run, and it fails, for a
+different and unfixable reason. Do not resume work on a caller-supplied
+`<oracle-trait>` for Zest without reading this section first.
+
+**What was tried.** A registry-pinning fix (see "Router registry fix" below)
+was deployed alongside an attempt to finish and ship the oracle-dynamic
+strategy. New contracts published under the M2 deployer
+(`SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB`):
+- `oracle-trait` -- [deploy tx](https://explorer.hiro.so/txid/0x82b3b578aa7df9bff748d7b375d4e706aeef6974d27944c297b5954344d9bb25?chain=mainnet)
+- `yield-strategy-trait-v2` (oracle-inclusive withdraw signature) -- [deploy tx](https://explorer.hiro.so/txid/0xd542685361d00923733e2b6e320203e600347970199c5275f53272b462a050a2?chain=mainnet)
+- `yield-router-v2` (registry-pinning fix, see below) -- [deploy tx](https://explorer.hiro.so/txid/0xfb972f59bf4d59b0117a28d82cce5b5b26f7b7b66cf587f3fa5620b10b63a1b4?chain=mainnet), confirmed success
+- `zest-strategy-live-v3` -- [deploy tx](https://explorer.hiro.so/txid/0xe61e6ec404c00bdebd5b8be8207f4c81de335dbd023dbe11e1993fd4495a1a6c?chain=mainnet), **FAILED**, `abort_by_response`, `vm_error: ":0:0: use of unresolved function 'as-contract'"`. This generic/nonsensical-looking error (`as-contract` is a real builtin) is the Clarity analyzer's fallback message for an internal limit hit during static analysis, not a real problem with that syntax.
+
+**Root cause, confirmed by direct source inspection of Zest's contracts.**
+`zest-strategy-live-v3.withdraw` receives `oracle` as a caller-supplied
+`<oracle-trait>` value and forwards it into
+`borrow-helper-v2-1-7.withdraw`. That function does NOT resolve the oracle
+to a concrete value -- it forwards the same trait-typed value again into
+`pool-borrow-v2-4.withdraw`, which forwards it a THIRD time into
+`pool-0-reserve-v2-0.check-balance-decrease-allowed` (the exact function
+whose `(asserts! (is-eq (contract-of oracle) (get oracle reserve-state))
+ERR_INVALID_ORACLE)` check broke on 2026-08-13). So a caller-supplied oracle
+means three chained hops of dynamic trait dispatch across three separate
+real Zest contracts before it's ever used. `zest-strategy-live-v2`'s
+hardcoded-literal-oracle approach avoids this entirely -- passing a literal
+principal only needs a cheap, bounded conformance check against one known
+contract, not full dynamic-dispatch cost analysis three hops deep.
+
+**Verified this is the actual cause, not size/complexity of BitYield's own
+code**, via a minimal (~1KB) isolated diagnostic contract
+(`zestv3-diag1.clar`, not part of the app) that does nothing but forward a
+caller-supplied `<oracle-trait>` into the real `borrow-helper-v2-1-7.withdraw`
+with a 1-entry assets list -- [deploy tx](https://explorer.hiro.so/txid/0x7dc8808de0b68ec86bf81336758e88535f6f4d746e2f2118ff42818b7826a995?chain=mainnet),
+confirmed on-chain, same identical error. Ruled out first (for free, no
+mainnet cost) via local Clarinet tests that forwarding a trait value into a
+*different* structurally-identical trait, even with multiple trait args and
+`try!`/`as-contract` nesting, type-checks fine in general -- the failure is
+specific to Zest's real, multi-hop call chain, not the general pattern.
+
+**Conclusion: this is not fixable from BitYield's side.** The dynamic-dispatch
+depth is baked into Zest's own contract architecture (borrow-helper ->
+pool-borrow-v2-4 -> pool-0-reserve-v2-0, each re-forwarding the oracle
+rather than resolving it early). BitYield only controls the first hop; once
+a dynamic trait value enters Zest's chain, their contracts propagate it
+three hops deep regardless of how our strategy contract is structured. Only
+Zest changing their own withdraw call chain would unblock this -- not
+something BitYield can fix by rewriting `zest-strategy-live-v3`. Do not
+retry this design without a response from Zest confirming a different entry
+point exists.
+
+**`zest-strategy-live-v3` and `yield-strategy-trait-v2` are dead ends as
+currently designed.** `zest-strategy-live-v2` (hardcoded oracle) remains the
+correct, only-viable strategy for the Zest route. The residual risk from the
+2026-08-13 incident (a future oracle rotation stranding funds with no
+recovery path, since Zest's zsBTC can only move through their own gated
+redeem, which requires the exact current oracle) is not solvable at the
+contract level. Mitigate operationally: keep Zest TVL low until there's a
+fast detect-and-redeploy runbook, and lean on the router registry fix below
+so a redeploy-on-rotation no longer risks misdirecting existing positions.
+
+## Router registry fix: strategy-contract pinning (2026-08-23)
+
+Separate from the above, fixed and deployed: `yield-router.clar`'s
+`positions` map previously stored only a `strategy` name
+(`string-ascii 20`), re-resolved through the mutable `strategy-contracts`
+registry on every withdraw. If an admin ever repointed a name to a new
+contract (e.g. exactly the kind of v2 -> v3 cutover this session attempted),
+an already-open position's withdraw would silently resolve against the new
+contract instead of the one its funds actually sit in -- best case a revert,
+worst case paying out of a different strategy's pooled balance.
+
+**Fix**: positions now store `strategy-contract: principal`, pinned at
+deposit time from the registry lookup, and `withdraw` validates the caller's
+strategy argument against that pinned value instead of a fresh registry
+lookup. Deployed as `yield-router-v2` (`SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.yield-router-v2`,
+[deploy tx](https://explorer.hiro.so/txid/0xfb972f59bf4d59b0117a28d82cce5b5b26f7b7b66cf587f3fa5620b10b63a1b4?chain=mainnet),
+confirmed success) alongside `oracle-trait` and `yield-strategy-trait-v2`
+(needed as `yield-router-v2` dependencies, both also live).
+
+**Not yet wired to live traffic.** No strategies are registered on
+`yield-router-v2` and the frontend still points at the original router --
+the currently-live Zest route (`zest-strategy-live-v2`) is unaffected and
+serving users exactly as before. Since the paired Zest v3 fix above is a
+dead end, `yield-router-v2` has no strategy to register yet without either
+(a) accepting `zest-strategy-live-v2`'s hardcoded-oracle shape (6-arg
+withdraw, no oracle-trait -- meaning `yield-router-v2`'s oracle-inclusive
+withdraw signature doesn't match it either, so it can't be registered as-is)
+or (b) a further redesign. Follow-up needed before this fix protects
+anything live.

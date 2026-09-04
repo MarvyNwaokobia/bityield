@@ -478,7 +478,7 @@ separately at the end.
 - [x] Confirm Dual Stacking rewards contract from deployed source
 - [x] Prove `as-contract` clears Zest's `tx-sender == contract-caller` guard (mainnet-fork spike)
 - [x] Decide the price-feed pass-through design (optional buffer on `withdraw`)
-- [ ] Confirm `sbtc-yield-rewards-v3` is the active Dual Stacking program (vs `-v2`)
+- [x] Confirm `sbtc-yield-rewards-v3` is the active Dual Stacking program (vs `-v2`) — confirmed empirically: `enroll-in-program` against `v3` succeeded on mainnet
 
 ### B. Outreach (has lead time, start now)
 - [ ] Stacks team: confirm an enrolled contract is picked up by `distribute-rewards`
@@ -486,29 +486,29 @@ separately at the end.
 - [ ] Zest team: courtesy confirm no imminent contract-version migration (optional)
 
 ### C. Contracts (build)
-- [ ] Add `(price-feed-bytes (optional (buff 8192)))` to `yield-strategy-trait.withdraw`
-- [ ] Add the same optional buffer to `yield-router.withdraw` and pass it through
-- [ ] Redeploy the router + re-register strategies (one-time, pre-audit)
-- [ ] Build live `zest-strategy`: `as-contract` supply into `borrow-helper-v2-1-7`; withdraw with Pyth bytes; real payout accounting
-- [ ] Build live `dual-stacking-strategy`: enroll once; pro-rata reward accounting across positions
-- [ ] Read live APY/TVL from each protocol (replace fixed preview rate)
+- [x] Add `(price-feed-bytes (optional (buff 8192)))` to `yield-strategy-trait.withdraw`
+- [x] Add the same optional buffer to `yield-router.withdraw` and pass it through
+- [x] Redeploy the router + re-register strategies (one-time, pre-audit)
+- [x] Build live `zest-strategy`: `as-contract` supply into `borrow-helper-v2-1-7`; withdraw with Pyth bytes; real payout accounting
+- [x] Build live `dual-stacking-strategy`: enroll once; pro-rata reward accounting across positions
+- [x] Read live APY/TVL from each protocol (replace fixed preview rate)
 
 ### D. Testing and evidence
-- [ ] Funded Zest supply -> withdraw round-trip in mainnet-fork simnet (settles Pyth sourcing)
-- [ ] Funded Dual Stacking enroll + accrual test in simnet
-- [ ] One real mainnet interaction per route (small, team-funded) for transaction evidence
-- [ ] Production Clarinet test suite green for the new strategies + router
+- [x] Funded Zest supply -> withdraw round-trip in mainnet-fork simnet (settles Pyth sourcing)
+- [x] Funded Dual Stacking enroll + accrual test in simnet
+- [x] One real mainnet interaction per route (small, team-funded) for transaction evidence
+- [x] Production Clarinet test suite green for the new strategies + router
 
 ### E. Frontend
-- [ ] Route cards on `/deposit` show real live APY per route
-- [ ] Route-specific position status (value read from the protocol, in BTC terms)
-- [ ] Route-specific risk information panels (lending risk; rewards-timing/program risk)
-- [ ] `/proof` surfaces the per-route mainnet interactions with explorer links
+- [x] Route cards on `/deposit` show real live APY per route
+- [x] Route-specific position status (value read from the protocol, in BTC terms)
+- [x] Route-specific risk information panels (lending risk; rewards-timing/program risk)
+- [x] `/proof` surfaces the per-route mainnet interactions with explorer links
 
 ### F. Deliverables (milestone sign-off)
-- [ ] Update README + DEPLOYMENT with the live routes and new addresses
-- [ ] Transaction evidence page/links assembled
-- [ ] Demo video covering the two-route flow
+- [x] Update README + DEPLOYMENT with the live routes and new addresses
+- [x] Transaction evidence page/links assembled
+- [x] Demo video covering the two-route flow — [youtu.be/pK6zb4c5u3g](https://youtu.be/pK6zb4c5u3g)
 - [ ] Submit for Endowment verification
 
 ### Gated to public launch (NOT required for v0.2 sign-off)
