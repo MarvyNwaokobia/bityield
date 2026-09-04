@@ -9,6 +9,7 @@ import { getSbtcBalanceSats } from '@/lib/stacks/balances';
 import { getLiveApyPercent } from '@/lib/stacks/contract';
 import { submitDepositTx, type TxPhase } from '@/lib/stacks/tx';
 import { satsToBtc, SATS_PER_BTC, formatApyPercent } from '@/lib/stacks/format';
+import { trackEvent } from '@/lib/track';
 import { fadeSlideUp, staggerContainer } from '@/lib/motion';
 import { Logo } from '../components/Logo';
 import { ConnectPrompt } from '../components/ConnectPrompt';
@@ -145,12 +146,19 @@ export default function DepositPage() {
     setErrorMessage(null);
     setPhase('signing');
     setTxid(null);
+    trackEvent('deposit_attempted', { wallet: address ?? undefined, strategy: selectedStrategy, amountSats });
     try {
       const outcome = await submitDepositTx(amountSats, selectedStrategy, { onPhase: setPhase, onTxId: setTxid });
       if (outcome.status === 'success') {
         setDepositedSats(amountSats);
         await refreshBalance();
         setStep('success');
+        trackEvent('deposit_completed', {
+          wallet: address ?? undefined,
+          strategy: selectedStrategy,
+          amountSats,
+          txid: outcome.txid,
+        });
       } else if (outcome.status === 'cancelled') {
         setStep('confirm');
       } else if (outcome.status === 'timeout') {
@@ -592,6 +600,18 @@ export default function DepositPage() {
                       </Link>
                     </p>
                   </div>
+                  {process.env.NEXT_PUBLIC_FEEDBACK_FORM_URL && (
+                    <p className="text-zinc-500 text-sm text-center mb-2">
+                      <a
+                        href={process.env.NEXT_PUBLIC_FEEDBACK_FORM_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-bitcoin/90 hover:text-bitcoin hover:underline"
+                      >
+                        Got 2 minutes? Tell us how this felt →
+                      </a>
+                    </p>
+                  )}
                 </SuccessCard>
               </motion.div>
             )}

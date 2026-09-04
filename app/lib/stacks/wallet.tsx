@@ -15,6 +15,7 @@ import {
   isConnected as isWalletConnected,
 } from '@stacks/connect';
 import { NETWORK_NAME } from './network';
+import { trackEvent } from '@/lib/track';
 
 interface WalletContextValue {
   address: string | null;
@@ -60,6 +61,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     try {
       await connectWallet({ network: NETWORK_NAME });
       notifyWalletChanged();
+      const connectedAddress = readStoredAddress();
+      if (connectedAddress) trackEvent('wallet_connected', { wallet: connectedAddress });
     } finally {
       setIsConnecting(false);
     }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import { WalletProvider } from "@/lib/stacks/wallet";
+import { ReferralCapture } from "./components/ReferralCapture";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -24,6 +25,7 @@ export default function RootLayout({
       className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased`}
     >
       <body className="font-sans">
+        <ReferralCapture />
         <WalletProvider>{children}</WalletProvider>
       </body>
     </html>
