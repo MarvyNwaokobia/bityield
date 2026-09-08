@@ -200,7 +200,8 @@ draft.
 | `sip-010-trait` | SIP-010 trait | [`0x86ec0b02…`](https://explorer.hiro.so/txid/0x86ec0b028ec880f454d718962d7a95d368d705b56c39d34426b35826e64e8795?chain=mainnet) |
 | `yield-strategy-trait` | Strategy trait (now with the `oracle` / `price-feed-bytes` `withdraw` args) | [`0xf6abb496…`](https://explorer.hiro.so/txid/0xf6abb4966139826c10cac3724f487f9ebbef7348f7e5650cde37be97be82cf5a?chain=mainnet) |
 | `yield-router` | Routing + accounting layer | [`0xfc904892…`](https://explorer.hiro.so/txid/0xfc90489275c5762056ca3d13ae4d03288372ca60359fe9e4cd66e6f4f98e77b4?chain=mainnet) |
-| `zest-strategy-live-v2` | Live Zest routing (current; supersedes `zest-strategy-live`, see incident below) | [`0x3dcce3b1…`](https://explorer.hiro.so/txid/0x3dcce3b1e4603bdaa88281f04bef8e60d5f4d22a8edad18d41f3b5c36a6e2a11?chain=mainnet) |
+| `zest-strategy-live-v2` | Superseded by `zest-strategy-live-v4`, see incident below (kept live so it stays queryable; it never held funds at cutover) | [`0x3dcce3b1…`](https://explorer.hiro.so/txid/0x3dcce3b1e4603bdaa88281f04bef8e60d5f4d22a8edad18d41f3b5c36a6e2a11?chain=mainnet) |
+| `zest-strategy-live-v4` | Live Zest routing (current; not `-v3` — that name is reserved in `docs/m2-testing-guide.md` for an abandoned, unrelated design) | [`0x79e833cf…`](https://explorer.hiro.so/txid/0x79e833cf680e080d0b761893ab90a9b1481a0e099b207284951e88145a4d1462?chain=mainnet) |
 | `dual-stacking-strategy-live` | Live Dual Stacking routing | [`0x8e48dd90…`](https://explorer.hiro.so/txid/0x8e48dd90914e92b99198053faba4b15d0e071bd70cbfb3ffbb72114b43744aaa?chain=mainnet) |
 | `hermetica-strategy-live` | Preview strategy (fixed APY; matches the actually-deployed trait shape) | [`0x5d74f5e1…`](https://explorer.hiro.so/txid/0x5d74f5e16697cfc926f0c9d7bc744e55da1448b52a07a19d2d70125ac91e73b2?chain=mainnet) |
 | `mock-sbtc-token` | Self-contained test token (unused once real sBTC is set) | [`0x9b752683…`](https://explorer.hiro.so/txid/0x9b7526830bf0431c64eb2c9fdbd3e40ea47814f6f70a2e47a347f33edc57a732?chain=mainnet) |
@@ -210,7 +211,8 @@ Post-deploy configuration (all confirmed `success`):
 | Action | Tx |
 |--------|----|
 | `set-sbtc-token` → canonical mainnet sBTC | [`0x1c75cd5f…`](https://explorer.hiro.so/txid/0x1c75cd5f300b27eecb0d83106522e866d554de0f9414dac256c77ba20c1a32fb?chain=mainnet) |
-| `add-strategy "zest"` → `zest-strategy-live-v2` | [`0x69206d33…`](https://explorer.hiro.so/txid/0x69206d3373288bd45a53c61b7fa15d7d9a8954c74b337aeb574d0406f515e5e4?chain=mainnet) |
+| `add-strategy "zest"` → `zest-strategy-live-v2` (superseded, see below) | [`0x69206d33…`](https://explorer.hiro.so/txid/0x69206d3373288bd45a53c61b7fa15d7d9a8954c74b337aeb574d0406f515e5e4?chain=mainnet) |
+| `add-strategy "zest"` → `zest-strategy-live-v4` (current) | [`0x5293a4ca…`](https://explorer.hiro.so/txid/0x5293a4cab7a7b82b8cabfaf80de1cca557435b41c1f5fa43089c84e665a89a98?chain=mainnet) |
 | `add-strategy "dual-stacking"` → `dual-stacking-strategy-live` | [`0x8e853d92…`](https://explorer.hiro.so/txid/0x8e853d924c995afc24016a1c1e512b8c80811fe277d45537f0a689ab1eff1467?chain=mainnet) |
 | `add-strategy "hermetica"` → `hermetica-strategy-live` | [`0x0166744c…`](https://explorer.hiro.so/txid/0x0166744caf226ed83e79e223389f33c6cc7f1a62fce3cad5e32f1d72cae76f01?chain=mainnet) |
 | Funded `zest-strategy-live-v2` with 1 STX (pays the Pyth update fee on withdraw) | [`0xc04d329e…`](https://explorer.hiro.so/txid/0xc04d329e2a0df805791e7823667dcaeb474f4595017cc07aa4f79f388b60b8ab?chain=mainnet) |
@@ -230,6 +232,48 @@ permanent, small (~$0.63) loss. Fixed and redeployed as
 router. Full incident writeup, including the failed recovery attempts and
 the underlying design lesson, is in
 [`docs/m2-testing-guide.md`](../docs/m2-testing-guide.md#zest-incident-oracle-rotation-dust-loss-redeploy-2026-08-13).
+
+## Zest incident #2: borrow-helper rotation + a second oracle bump (2026-09-08)
+
+A real (600-sat) deposit through `zest-strategy-live-v2` aborted with
+`(err u8000001)`. Root cause, confirmed via read-only calls against Zest's
+own contracts: Zest deployed `borrow-helper-v2-1-8` on 2026-08-13 (hours
+after `zest-strategy-live-v2` went live referencing the older
+`borrow-helper-v2-1-7`) and has since revoked `v2-1-7` from
+`incentives-v2-2`'s approved-contracts allowlist. Both `deposit` and
+`withdraw` route through `borrow-helper`'s internal
+`claim-rewards-to-vault` call, which is gated on `contract-caller` being an
+approved contract — so every call through the old helper now hits
+`incentives-v2-2`'s `ERR_UNAUTHORIZED` (`u8000001`), regardless of amount or
+caller. `zest-strategy-live-v2`'s on-chain TVL was `0` at the time (confirmed
+via `get-tvl`), so this was a clean cutover — no funds were ever at risk or
+stuck.
+
+The helper bump came bundled with a second, independent oracle rotation:
+every Zest reserve priced off the shared STX/BTC oracle (sbtc, ststx, wstx,
+ststxbtc) moved from `stx-btc-oracle-v1-6` to `v1-7` (confirmed via each
+reserve's live `get-reserve-state`). `v1-7` also switched from the old Pyth
+Hermes/Wormhole PNAU price-feed format to Pyth *Lazer*.
+
+**Fix**: `zest-strategy-live-v4` — same hardcoded-literal-oracle shape as
+`v2` (deliberately not `-v3`; see that file's header for why), updated to
+`borrow-helper-v2-1-8` and `stx-btc-oracle-v1-7` throughout, with the
+`assets` list's order and every lp-token reconfirmed live against
+`pool-borrow-v2-4.get-assets` and each reserve's current state rather than
+carried over from the old file. Deployed and registered as the router's
+`"zest"` route (see tables above). The first deploy attempt aborted with the
+generic Clarity analyzer error `":0:0: use of unresolved function
+'as-contract'"` — the same fallback message the abandoned oracle-dynamic
+`v3` attempt hit — because it defaulted to Clarity 4 instead of matching
+`v2`'s proven-working Clarity 3; pinning `clarityVersion: Clarity3`
+(`scripts/deploy-zestv4.mjs`) fixed it.
+
+**Known gap, not fixed by this deploy**: `app/app/api/pyth-price/route.ts`
+and `app/lib/stacks/pyth.ts` still fetch the old Pyth Hermes PNAU format for
+the withdraw `price-feed-bytes` argument. `stx-btc-oracle-v1-7` needs a Pyth
+*Lazer* update instead, so a live `withdraw` will still fail until that
+route is switched to a Lazer source. `deposit` does not take
+`price-feed-bytes` at all and is unaffected.
 
 ## Redeploying v0.2 (if the interface changes again)
 
@@ -256,7 +300,7 @@ NEXT_PUBLIC_STACKS_NETWORK=mainnet
 NEXT_PUBLIC_HIRO_API_URL=https://api.mainnet.hiro.so
 NEXT_PUBLIC_YIELD_ROUTER_ADDRESS=SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.yield-router
 NEXT_PUBLIC_SBTC_CONTRACT_ADDRESS=SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token
-NEXT_PUBLIC_ZEST_STRATEGY_ADDRESS=SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.zest-strategy-live-v2
+NEXT_PUBLIC_ZEST_STRATEGY_ADDRESS=SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.zest-strategy-live-v4
 NEXT_PUBLIC_DUAL_STRATEGY_ADDRESS=SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.dual-stacking-strategy-live
 NEXT_PUBLIC_HERMETICA_STRATEGY_ADDRESS=SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.hermetica-strategy-live
 SPONSOR_PRIVATE_KEY=...   # sponsor account private key (server-only, never commit)

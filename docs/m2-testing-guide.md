@@ -28,7 +28,8 @@ Deployer / owner: `SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB` (fresh, isolated).
 | `SP37FXV5….sip-010-trait` | `0x86ec0b02…64e8795` |
 | `SP37FXV5….mock-sbtc-token` | `0x9b752683…dc57a732` |
 | `SP37FXV5….zest-strategy-live` (SUPERSEDED, see incident) | `0xae20ad6f…6c9c583649` |
-| `SP37FXV5….zest-strategy-live-v2` (CURRENT) | `0x3dcce3b1…36a6e2a11` |
+| `SP37FXV5….zest-strategy-live-v2` (SUPERSEDED, see incident #2, 2026-09-08) | `0x3dcce3b1…36a6e2a11` |
+| `SP37FXV5….zest-strategy-live-v4` (CURRENT; not `-v3`, see "Oracle-dynamic redesign" below) | `0x79e833cf…45a4d1462` |
 | `SP37FXV5….dual-stacking-strategy-live` | `0x8e48dd90…b43744aaa` |
 | `SP37FXV5….hermetica-strategy-live` | `0x5d74f5e1…ac91e73b2` |
 
@@ -512,6 +513,21 @@ redeem, which requires the exact current oracle) is not solvable at the
 contract level. Mitigate operationally: keep Zest TVL low until there's a
 fast detect-and-redeploy runbook, and lean on the router registry fix below
 so a redeploy-on-rotation no longer risks misdirecting existing positions.
+
+## Zest incident #2: borrow-helper rotation + a second oracle bump (2026-09-08)
+
+`zest-strategy-live-v2` broke: a real deposit aborted with `(err u8000001)`.
+Root cause, redeploy, and the residual Pyth-Lazer gap in the withdraw
+price-feed source are all written up in
+[`contracts/DEPLOYMENT.md`](../contracts/DEPLOYMENT.md#zest-incident-2-borrow-helper-rotation--a-second-oracle-bump-2026-09-08)
+rather than duplicated here. Short version: Zest revoked the old
+`borrow-helper-v2-1-7` from `incentives-v2-2`'s approved-contracts allowlist
+in favor of `v2-1-8`, and bundled in a second oracle rotation
+(`stx-btc-oracle-v1-6` -> `v1-7`, also switching to Pyth Lazer). Fixed as
+`zest-strategy-live-v4` (deliberately not `-v3` - see that file's header and
+"Oracle-dynamic redesign" below for why that name is reserved for a
+different, abandoned design). TVL was `0` at the time, so no funds were at
+risk.
 
 ## Router registry fix: strategy-contract pinning (2026-08-23)
 
