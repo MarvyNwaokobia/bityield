@@ -2,16 +2,25 @@
  * Waitlist storage.
  *
  * Deliberately backend-agnostic: the API route only ever calls `addToWaitlist`,
- * so swapping providers is a change to this file and an env var, nothing else.
+ * so swapping (or adding) providers is a change to this file and an env var,
+ * nothing else.
  *
- * Resolution order:
- *   1. Resend contacts  (RESEND_API_KEY)
- *   2. Generic webhook  (WAITLIST_WEBHOOK_URL) — Zapier / Make / Sheets / custom
- *   3. Local file       (development only)
+ * Both of these can be set at once, and both then receive every signup:
+ *   - Resend contacts  (RESEND_API_KEY)         — real email provider, doubles
+ *     as the list you actually send from later.
+ *   - Generic webhook  (WAITLIST_WEBHOOK_URL)   — Zapier / Make / a Google
+ *     Sheet / custom endpoint, useful as your own copy of the raw signups.
  *
- * With nothing configured in production we return `unconfigured` rather than a
- * fake success. A waitlist that silently drops addresses is worse than no
+ * With neither set in production we return `unconfigured` rather than a fake
+ * success. A waitlist that silently drops addresses is worse than no
  * waitlist, because you only find out at launch when the list is empty.
+ * With neither set outside production, signups fall back to a local file so
+ * the form stays testable.
+ *
+ * When both are configured, Resend's result is what the caller (and the
+ * signup form) sees, since it's the only one of the two with real duplicate
+ * detection (an upsert-based Audience) — the webhook is a secondary,
+ * best-effort copy that never changes what the user is told.
  */
 
 export type WaitlistResult =
@@ -33,9 +42,16 @@ export function normalizeEmail(email: string): string {
 
 export async function addToWaitlist(email: string, source = 'landing'): Promise<WaitlistResult> {
   const resendKey = process.env.RESEND_API_KEY;
-  if (resendKey) return addViaResend(email, resendKey);
-
   const webhook = process.env.WAITLIST_WEBHOOK_URL;
+
+  if (resendKey) {
+    const [resendResult] = await Promise.all([
+      addViaResend(email, resendKey),
+      webhook ? addViaWebhook(email, source, webhook) : Promise.resolve(),
+    ]);
+    return resendResult;
+  }
+
   if (webhook) return addViaWebhook(email, source, webhook);
 
   if (process.env.NODE_ENV !== 'production') return addToLocalFile(email, source);
