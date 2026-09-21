@@ -7,9 +7,9 @@ export function Logo() {
       href="/"
       className="flex items-center gap-2 select-none hover:opacity-90 transition-opacity"
     >
-      {/* logo-mark.png is logo.png with the dark plate keyed out and cropped to
-          the artwork, so the glyph fills its box instead of the ~52% it used to.
-          No rounding: there is no plate left to round. */}
+      {/* logo-mark.png is the mark alone on a transparent square, rendered from
+          design/logo/*.svg and cropped tight to the artwork, so the glyph fills
+          its box. No rounding: there is no plate left to round. */}
       <Image
         src="/logo-mark.png"
         alt="BitYield logo"
