@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAddressFromPrivateKey } from '@stacks/transactions';
 import { HIRO_API_URL, NETWORK_NAME } from '@/lib/stacks/network';
+import { hiroFetch } from '@/lib/stacks/hiro-server';
 
 export async function GET() {
   const sponsorKey = process.env.SPONSOR_PRIVATE_KEY;
@@ -20,7 +21,7 @@ export async function GET() {
 
     // Query Hiro Extended API for address balances
     const url = `${HIRO_API_URL}/extended/v1/address/${address}/balances`;
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await hiroFetch(url, { cache: 'no-store' });
     if (!res.ok) {
       throw new Error(`Failed to query balances from Hiro API. Status: ${res.status}`);
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { broadcastTransaction, deserializeTransaction, sponsorTransaction } from '@stacks/transactions';
 import { network } from '@/lib/stacks/network';
+import { hiroClient } from '@/lib/stacks/hiro-server';
 
 export async function POST(request: Request) {
   const sponsorKey = process.env.SPONSOR_PRIVATE_KEY;
@@ -22,9 +23,10 @@ export async function POST(request: Request) {
       transaction,
       sponsorPrivateKey: sponsorKey,
       network,
+      client: hiroClient(),
     });
 
-    const result = await broadcastTransaction({ transaction: sponsoredTx, network });
+    const result = await broadcastTransaction({ transaction: sponsoredTx, network, client: hiroClient() });
     if ('error' in result) {
       const reason = 'reason_data' in result && result.reason_data && 'message' in result.reason_data
         ? result.reason_data.message
