@@ -1,36 +1,61 @@
 import { NextResponse } from 'next/server';
 
-// Pyth price-feed ids the Zest sBTC oracle (stx-btc-oracle-v1-4) reads.
-// A Zest withdraw must submit a fresh update for these in the same tx, or Zest
-// reverts with "no-feed-update". Fetched server-side to avoid browser CORS and
-// to keep the feed ids in one place.
-const PYTH_FEED_IDS = {
-  'STX/USD': 'ec7a775f46379b5e943c3526b1c8d54cd49749176b0b98e02dde68d1bd335c17',
-  'BTC/USD': 'e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43',
-} as const;
+// Zest's sBTC oracle (stx-btc-oracle-v1-7) verifies a signed Pyth *Lazer* update,
+// not the old Hermes/Wormhole one. A Zest withdraw must carry a fresh update in
+// the same tx. Fetched server-side so the API key never reaches the browser.
+//
+// Lazer feed ids the oracle understands: BTC/USD = 1, STX/USD = 45.
+// sBTC is priced from the BTC feed only, so by default we request just BTC.
+// Set PYTH_LAZER_FEED_IDS="1,45" if a withdraw ever needs the STX price too
+// (that requires an API key entitled to the STX/USD spot feed).
+const LAZER_BASE = process.env.PYTH_LAZER_URL ?? 'https://pyth-lazer.dourolabs.app';
+const PYTH_API_KEY = process.env.PYTH_API_KEY;
+const FEED_IDS = (process.env.PYTH_LAZER_FEED_IDS ?? '1')
+  .split(',')
+  .map((s) => Number(s.trim()))
+  .filter((n) => Number.isInteger(n) && n > 0);
 
-const HERMES_BASE = process.env.PYTH_HERMES_URL ?? 'https://hermes.pyth.network';
-
-// Returns the latest Pyth accumulator update (PNAU) for the feeds above as a hex
-// string, ready to pass on-chain as the withdraw `price-feed-bytes` argument.
+// The oracle accepts channel 3 (fixed_rate@200ms) or 4 (fixed_rate@1000ms).
+// Format must be "evm": it matches pyth-lazer-decoder-v1's envelope
+// (magic 0x2a22999a, big-endian length, big-endian payload). "leEcdsa" is
+// little-endian and fails to decode.
 export async function GET() {
-  const params = Object.values(PYTH_FEED_IDS)
-    .map((id) => `ids%5B%5D=${id}`)
-    .join('&');
-  const url = `${HERMES_BASE}/v2/updates/price/latest?${params}&encoding=hex`;
+  if (!PYTH_API_KEY) {
+    return NextResponse.json({ error: 'PYTH_API_KEY is not configured.' }, { status: 502 });
+  }
 
   try {
-    const res = await fetch(url, { cache: 'no-store' });
+    const res = await fetch(`${LAZER_BASE}/v1/latest_price`, {
+      method: 'POST',
+      cache: 'no-store',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${PYTH_API_KEY}`,
+      },
+      body: JSON.stringify({
+        priceFeedIds: FEED_IDS,
+        properties: [
+          'price',
+          'exponent',
+          'confidence',
+          'publisherCount',
+          'feedUpdateTimestamp',
+        ],
+        formats: ['evm'],
+        channel: 'fixed_rate@200ms',
+        jsonBinaryEncoding: 'hex',
+      }),
+    });
     if (!res.ok) {
       return NextResponse.json(
-        { error: `Pyth Hermes returned ${res.status}.` },
+        { error: `Pyth Lazer returned ${res.status}.` },
         { status: 502 }
       );
     }
-    const data: { binary?: { data?: string[] } } = await res.json();
-    const hex = data.binary?.data?.[0];
+    const data: { evm?: { data?: string } } = await res.json();
+    const hex = data.evm?.data;
     if (!hex) {
-      return NextResponse.json({ error: 'Pyth Hermes returned no update data.' }, { status: 502 });
+      return NextResponse.json({ error: 'Pyth Lazer returned no update data.' }, { status: 502 });
     }
     return NextResponse.json({ hex });
   } catch (err) {
