@@ -8,6 +8,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
 import { getPositions, type Position } from '@/lib/stacks/contract';
 import { submitWithdrawTx, type TxPhase } from '@/lib/stacks/tx';
+import { trackEvent } from '@/lib/track';
 import { type StrategyName, explorerTxUrl } from '@/lib/stacks/network';
 import { formatBtc, satsToBtc, formatApyPercent } from '@/lib/stacks/format';
 import { fadeSlideUp, hoverScale, springTransition, staggerContainer } from '@/lib/motion';
@@ -58,26 +59,44 @@ function WithdrawPageInner() {
     setErrorMessage(null);
     setPhase('signing');
     setTxid(null);
+    const eventBase = {
+      wallet: address ?? undefined,
+      strategy: selected.strategy,
+      positionId: Number(selected.id),
+      amountSats: Number(selected.amountSats),
+    };
+    trackEvent('withdraw_attempted', eventBase);
+    let lastTxid: string | undefined;
     try {
-      const outcome = await submitWithdrawTx(selected.id, selected.strategy as StrategyName, { onPhase: setPhase, onTxId: setTxid });
+      const outcome = await submitWithdrawTx(selected.id, selected.strategy as StrategyName, {
+        onPhase: setPhase,
+        onTxId: (id) => {
+          lastTxid = id;
+          setTxid(id);
+        },
+      });
       if (outcome.status === 'success') {
         setWithdrawnTotalSats(selected.amountSats + selected.accruedYieldSats);
         await refreshPositions();
         setStep('success');
+        trackEvent('withdraw_completed', { ...eventBase, txid: outcome.txid });
       } else if (outcome.status === 'cancelled') {
         setStep('confirm');
       } else if (outcome.status === 'timeout') {
+        trackEvent('withdraw_failed', { ...eventBase, reason: 'timeout', txid: lastTxid });
         setErrorMessage(
           'This is taking longer than expected. Your withdrawal may still confirm. Check back in a few minutes before trying again.'
         );
         setStep('error');
       } else {
+        trackEvent('withdraw_failed', { ...eventBase, reason: 'failed', txid: lastTxid });
         setErrorMessage(
           'This sometimes happens when network conditions change. Your position has not changed.'
         );
         setStep('error');
       }
     } catch (err) {
+      trackEvent('withdraw_failed', { ...eventBase, reason: 'error', txid: lastTxid });
       setErrorMessage(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
       setStep('error');
     }

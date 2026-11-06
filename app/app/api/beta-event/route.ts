@@ -1,7 +1,21 @@
 import { NextResponse } from 'next/server';
 import { logBetaEvent, type BetaEvent } from '@/lib/events';
 
-const VALID_TYPES = new Set<BetaEvent['type']>(['wallet_connected', 'deposit_attempted', 'deposit_completed']);
+const VALID_TYPES = new Set<BetaEvent['type']>([
+  'visit',
+  'wallet_connected',
+  'deposit_attempted',
+  'deposit_completed',
+  'deposit_failed',
+  'withdraw_attempted',
+  'withdraw_completed',
+  'withdraw_failed',
+]);
+
+/** Accept only short strings so a caller cannot bloat the log. */
+const str = (v: unknown, max = 300): string | undefined =>
+  typeof v === 'string' && v.length > 0 ? v.slice(0, max) : undefined;
+const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 
 /** Best-effort in-process throttle. Resets on cold start, so it deters casual
  *  spam rather than a determined attacker. Same pattern as /api/waitlist. */
@@ -35,14 +49,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: 'dropped' }, { status: 429 });
   }
 
+  // Read the body as text first so the exact bytes received can be stored as `raw`.
+  let rawBody: string;
   let payload: unknown;
   try {
-    payload = await request.json();
+    rawBody = await request.text();
+    payload = JSON.parse(rawBody);
   } catch {
     return NextResponse.json({ status: 'dropped' }, { status: 400 });
   }
 
-  const { type, wallet, ref, strategy, amountSats, txid } = (payload ?? {}) as Record<string, unknown>;
+  const p = (payload ?? {}) as Record<string, unknown>;
+  const { type } = p;
 
   if (typeof type !== 'string' || !VALID_TYPES.has(type as BetaEvent['type'])) {
     return NextResponse.json({ status: 'dropped' }, { status: 400 });
@@ -50,12 +68,36 @@ export async function POST(request: Request) {
 
   await logBetaEvent({
     type: type as BetaEvent['type'],
-    wallet: typeof wallet === 'string' ? wallet : undefined,
-    ref: typeof ref === 'string' ? ref : undefined,
-    strategy: typeof strategy === 'string' ? strategy : undefined,
-    amountSats: typeof amountSats === 'number' ? amountSats : undefined,
-    txid: typeof txid === 'string' ? txid : undefined,
+    // original fields, parsed exactly as before
+    wallet: typeof p.wallet === 'string' ? p.wallet : undefined,
+    ref: typeof p.ref === 'string' ? p.ref : undefined,
+    strategy: typeof p.strategy === 'string' ? p.strategy : undefined,
+    amountSats: typeof p.amountSats === 'number' ? p.amountSats : undefined,
+    txid: typeof p.txid === 'string' ? p.txid : undefined,
     at: new Date().toISOString(),
+    // added context
+    positionId: num(p.positionId),
+    reason: str(p.reason, 40),
+    visitorId: str(p.visitorId, 64),
+    clientAt: str(p.clientAt, 40),
+    path: str(p.path, 200),
+    firstSeenAt: str(p.firstSeenAt, 40),
+    firstRef: str(p.firstRef, 100),
+    firstReferrer: str(p.firstReferrer),
+    firstUtmSource: str(p.firstUtmSource, 100),
+    firstUtmMedium: str(p.firstUtmMedium, 100),
+    firstUtmCampaign: str(p.firstUtmCampaign, 100),
+    isReturning: typeof p.isReturning === 'boolean' ? p.isReturning : undefined,
+    visitCount: num(p.visitCount),
+    landingPath: str(p.landingPath, 200),
+    referrer: str(p.referrer),
+    utmSource: str(p.utmSource, 100),
+    utmMedium: str(p.utmMedium, 100),
+    utmCampaign: str(p.utmCampaign, 100),
+    // observed by the server, not supplied by the client
+    userAgent: str(request.headers.get('user-agent'), 300),
+    country: str(request.headers.get('x-vercel-ip-country'), 8),
+    raw: rawBody.slice(0, 4000),
   });
 
   return NextResponse.json({ status: 'logged' });

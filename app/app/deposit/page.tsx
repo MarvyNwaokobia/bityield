@@ -147,8 +147,15 @@ export default function DepositPage() {
     setPhase('signing');
     setTxid(null);
     trackEvent('deposit_attempted', { wallet: address ?? undefined, strategy: selectedStrategy, amountSats });
+    let lastTxid: string | undefined;
     try {
-      const outcome = await submitDepositTx(amountSats, selectedStrategy, { onPhase: setPhase, onTxId: setTxid });
+      const outcome = await submitDepositTx(amountSats, selectedStrategy, {
+        onPhase: setPhase,
+        onTxId: (id) => {
+          lastTxid = id;
+          setTxid(id);
+        },
+      });
       if (outcome.status === 'success') {
         setDepositedSats(amountSats);
         await refreshBalance();
@@ -162,17 +169,20 @@ export default function DepositPage() {
       } else if (outcome.status === 'cancelled') {
         setStep('confirm');
       } else if (outcome.status === 'timeout') {
+        trackEvent('deposit_failed', { wallet: address ?? undefined, strategy: selectedStrategy, amountSats, reason: 'timeout', txid: lastTxid });
         setErrorMessage(
           'This is taking longer than expected. Your transaction may still confirm. Check your dashboard in a few minutes.'
         );
         setStep('error');
       } else {
+        trackEvent('deposit_failed', { wallet: address ?? undefined, strategy: selectedStrategy, amountSats, reason: 'failed', txid: lastTxid });
         setErrorMessage(
           'This sometimes happens when network conditions change. Your balance is unaffected.'
         );
         setStep('error');
       }
     } catch (err) {
+      trackEvent('deposit_failed', { wallet: address ?? undefined, strategy: selectedStrategy, amountSats, reason: 'error', txid: lastTxid });
       setErrorMessage(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
       setStep('error');
     }

@@ -36,6 +36,20 @@ accepts a JSON POST — same pattern as the waitlist, see `app/.env.example`):
 - `deposit_completed` — fires once the deposit tx is confirmed on-chain.
   Carries `wallet`, `strategy`, `amountSats`, `txid`, `ref`.
 
+Added for the Nov 30 review, on top of the three above (nothing was removed
+or renamed): `visit` (once per browser session, with `isReturning`,
+`visitCount`, `referrer`, `utm*` and a first-touch record), `deposit_failed`,
+`withdraw_attempted`, `withdraw_completed`, `withdraw_failed`, and on every event
+an anonymous `visitorId`, the browser clock, and server-observed `userAgent` and
+coarse `country`. Each event also carries `raw`, the browser request exactly as
+received. Event meanings and the Google Sheet destination (raw log + parsed
+view) are in [beta-events-sheet.md](beta-events-sheet.md).
+
+**Funding independence** is checked from the chain, not from events:
+`node contracts/scripts/funding-report.mjs`. It traces each depositor's funding
+chain to its root and flags team-funded wallets, funding hubs and sweeps back
+to a hub. Run it before counting any wallet as a non-team user.
+
 Each invitee gets a personal link, `https://bityield.click/?ref=<code>`
 (pick short codes, e.g. first names). The code is captured into
 `localStorage` on first load (`app/components/ReferralCapture.tsx`) and

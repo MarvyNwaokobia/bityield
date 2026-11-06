@@ -36,6 +36,7 @@ yarn-error.log*
 
 # local dev waitlist store (never a real backend)
 .waitlist.local.jsonl
+.beta-events.local.jsonl
 
 # vercel
 .vercel

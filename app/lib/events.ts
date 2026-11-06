@@ -15,14 +15,52 @@
  * beta user as a broken deposit flow.
  */
 
+export type BetaEventType =
+  | 'visit'
+  | 'wallet_connected'
+  | 'deposit_attempted'
+  | 'deposit_completed'
+  | 'deposit_failed'
+  | 'withdraw_attempted'
+  | 'withdraw_completed'
+  | 'withdraw_failed';
+
 export interface BetaEvent {
-  type: 'wallet_connected' | 'deposit_attempted' | 'deposit_completed';
+  type: BetaEventType;
+  // Original fields (unchanged): the per-invitee ref code as captured in the
+  // browser, the wallet, the deposit details, the txid, and the server timestamp.
   wallet?: string;
   ref?: string;
   strategy?: string;
   amountSats?: number;
   txid?: string;
   at: string;
+
+  // Added for the Nov 30 review. All optional, all additive.
+  positionId?: number;
+  reason?: string; // *_failed events: 'timeout' | 'failed' | 'error'
+  visitorId?: string; // anonymous random id; ties visits to a wallet once it connects
+  clientAt?: string; // browser clock, for comparison with the server `at`
+  path?: string;
+  firstSeenAt?: string; // first-touch attribution, written once per browser
+  firstRef?: string;
+  firstReferrer?: string;
+  firstUtmSource?: string;
+  firstUtmMedium?: string;
+  firstUtmCampaign?: string;
+  isReturning?: boolean; // visit events
+  visitCount?: number; // visit events: sessions so far in this browser
+  landingPath?: string;
+  referrer?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
+
+  // Server-observed, never taken from the client.
+  userAgent?: string;
+  country?: string; // coarse, from the platform header; no IP address is stored
+  /** The request body exactly as received, so the log can be audited unedited. */
+  raw?: string;
 }
 
 export async function logBetaEvent(event: BetaEvent): Promise<void> {
