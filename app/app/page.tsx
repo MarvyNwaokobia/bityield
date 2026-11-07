@@ -45,11 +45,11 @@ const Icon = {
 
 // ─── Content ─────────────────────────────────────────────────────────────────
 
-const HERO_BULLETS = ['Non-custodial: your keys', 'No bridges to manage', 'Zero gas fees to pay'];
+const HERO_BULLETS = ['Non-custodial: your keys', 'Only sBTC needed', 'Zero gas fees to pay'];
 
 const FEATURES = [
   { icon: Icon.key, title: 'Your keys, your Bitcoin', desc: 'Non-custodial by design. Your BTC stays under your control. BitYield never holds it.' },
-  { icon: Icon.shield, title: 'No bridges, no wrapping', desc: 'sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1. No synthetic assets, no bridge risk.' },
+  { icon: Icon.shield, title: 'Bitcoin-backed sBTC', desc: 'sBTC is backed 1:1 by real BTC held by the sBTC signers. BitYield runs no bridge of its own. If you only have BTC, convert it once with the official bridge.' },
   { icon: Icon.bolt, title: 'Zero gas fees', desc: 'Every transaction is sponsored. You never need to hold or spend STX to deposit or withdraw.' },
   { icon: Icon.chart, title: 'Yield paid in Bitcoin', desc: 'Earnings are denominated and paid in BTC, never points, tokens, or derivatives.' },
 ];
@@ -70,7 +70,7 @@ const INFRA = [
 ];
 
 const FAQ: { q: string; a: ReactNode }[] = [
-  { q: 'Does my Bitcoin leave the Bitcoin network?', a: 'No. sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1 consensus. You hold it under your own keys, with no third-party custodian and no wrapped-token bridge risk.' },
+  { q: 'Does my Bitcoin leave the Bitcoin network?', a: 'Converting BTC to sBTC locks your BTC with the sBTC signers on Bitcoin and issues sBTC 1:1 on Stacks, which is what BitYield uses. You can redeem sBTC for BTC through the official bridge. BitYield runs no bridge of its own, and until you deposit, your sBTC stays under your own keys.' },
   { q: 'Why don’t I pay gas in STX?', a: 'BitYield sponsors it for you. When you sign a deposit or withdrawal, our sponsor account pays the STX network fee, so you can start earning without first going out to buy STX. Sponsorship is part of early access and won’t run forever, so at some point network fees become yours to cover. Even then you won’t need to hold STX, just a small fee settled in sBTC or taken from the yield you’ve already earned.' },
   {
     q: 'How are the yield rates generated today?',
@@ -269,8 +269,8 @@ export default function Home() {
               <span className="text-bitcoin">Earn Bitcoin</span>
             </motion.h1>
             <motion.p variants={fadeSlideUp} className="text-lg text-zinc-400 max-w-lg mx-auto lg:mx-0 mt-6 leading-relaxed">
-              Deposit sBTC and earn yield paid in Bitcoin. Non-custodial, no bridges to
-              manage, and zero gas fees.
+              Deposit sBTC and earn yield paid in Bitcoin. Non-custodial, zero gas fees, and
+              sBTC is the only token you need.
             </motion.p>
             <motion.ul variants={fadeSlideUp} className="mt-7 flex flex-col sm:flex-row lg:flex-col xl:flex-row gap-x-6 gap-y-2.5 max-w-lg mx-auto lg:mx-0">
               {HERO_BULLETS.map((b) => (
@@ -473,6 +473,7 @@ export default function Home() {
             <Link href="/dashboard" className="hover:text-white transition-colors">App</Link>
             <Link href="/docs" className="hover:text-white transition-colors">Docs</Link>
             <Link href="/proof" className="hover:text-white transition-colors">Proof</Link>
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
             <span>Built on Stacks · Secured by Bitcoin</span>
           </div>
         </div>

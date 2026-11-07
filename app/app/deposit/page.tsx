@@ -283,7 +283,7 @@ export default function DepositPage() {
                     </div>
                     <p className="text-zinc-400 text-sm leading-relaxed">
                       You don&apos;t have any sBTC in this wallet yet. sBTC is 1:1 Bitcoin-backed.
-                      Get some via the {NETWORK_NAME === 'mainnet' ? 'official sBTC bridge' : 'Hiro testnet faucet'},
+                      Get some via the {NETWORK_NAME === 'mainnet' ? 'official sBTC bridge (send BTC, receive sBTC at this wallet, usually about 20 to 40 minutes)' : 'Hiro testnet faucet'},
                       then come back and refresh.
                     </p>
                     <a
@@ -424,10 +424,10 @@ export default function DepositPage() {
                         <svg className="w-4 h-4 text-bitcoin" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
                         </svg>
-                        Your Bitcoin stays on Bitcoin L1
+                        Backed 1:1 by real Bitcoin
                       </p>
                       <p className="leading-relaxed">
-                        Through Stacks sBTC, your assets are secured by Bitcoin L1 consensus. You maintain self-custody under your own keys, with no third-party wrapping or bridge risk.
+                        sBTC is backed 1:1 by BTC held by the sBTC signers on Bitcoin. BitYield runs no bridge of its own, and you keep your sBTC under your own keys until you deposit.
                       </p>
                     </div>
 
@@ -529,8 +529,8 @@ export default function DepositPage() {
                       {NETWORK_NAME === 'mainnet' ? ' mainnet' : ' Stacks testnet'} and are not yet independently audited. Deposit only what you are comfortable testing with.
                     </li>
                     <li>
-                      <span className="text-zinc-300 font-medium">Your Bitcoin stays on Bitcoin L1.</span> sBTC is 1:1
-                      Bitcoin-backed and secured by Bitcoin L1 consensus, with no third-party wrapping or bridge custodian.
+                      <span className="text-zinc-300 font-medium">sBTC peg risk.</span> sBTC is backed 1:1 by BTC held by the sBTC
+                      signers. BitYield runs no bridge of its own, but the peg depends on those signers and the official bridge.
                     </li>
                   </ul>
                   <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">

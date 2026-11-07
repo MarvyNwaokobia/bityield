@@ -192,9 +192,9 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-xl font-semibold mb-2">Nothing earning yet</p>
                   <p className="text-zinc-400 leading-relaxed">
-                    Deposit Bitcoin to start earning, paid in Bitcoin — up to {formatApyPercent(apy)}{' '}
-                    APY across live routes today. Your Bitcoin stays on Bitcoin L1 under your own
-                    keys.
+                    Deposit sBTC to start earning, paid in Bitcoin, up to {formatApyPercent(apy)}{' '}
+                    APY across live routes today. You keep your sBTC under your own keys until you
+                    deposit.
                   </p>
                 </motion.div>
               )}

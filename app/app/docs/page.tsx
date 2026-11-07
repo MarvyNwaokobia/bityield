@@ -140,8 +140,8 @@ export default function DocsPage() {
               <ul className="list-disc pl-5 space-y-2">
                 <li>
                   <span className="text-zinc-300 font-medium">Your Bitcoin stays Bitcoin.</span> sBTC
-                  is 1:1 Bitcoin-backed. When you deposit, your Bitcoin stays on Bitcoin L1 under your
-                  own keys. No bridge risk, no wrapped-token risk.
+                  is backed 1:1 by real BTC held by the sBTC signers on Bitcoin L1. You hold it under
+                  your own keys until you deposit, and BitYield runs no bridge of its own.
                 </li>
                 <li>
                   <span className="text-zinc-300 font-medium">The yield is real and on-chain.</span>{' '}
@@ -167,9 +167,33 @@ export default function DocsPage() {
                 <Step n={2} title="Get sBTC">
                   <p>
                     sBTC is Bitcoin you can put to work on Stacks, redeemable 1:1 for BTC at any time.
-                    If you do not have sBTC yet, use the official sBTC bridge (linked from the deposit
-                    screen): send BTC, receive sBTC. BitYield does not bridge funds itself, it links
-                    you to the real flow.
+                    If your wallet already holds sBTC, skip to the next step. If you only have BTC,
+                    convert it first with the official sBTC bridge:
+                  </p>
+                  <ol className="list-decimal pl-5 space-y-1.5">
+                    <li>
+                      Open the bridge. The <span className="text-zinc-200">Get sBTC</span> button on the
+                      deposit screen takes you straight there.
+                    </li>
+                    <li>Connect the Bitcoin wallet that holds your BTC.</li>
+                    <li>
+                      Choose where to receive the sBTC: the same Stacks wallet address you connected to
+                      BitYield, so the sBTC lands where BitYield can see it. Double-check the address
+                      before you send.
+                    </li>
+                    <li>
+                      Read the fee the bridge shows, then send your BTC. If this is your first time,
+                      start with a small amount to see how it works.
+                    </li>
+                    <li>
+                      Wait. The bridge says this usually takes about 20 to 40 minutes while Bitcoin
+                      confirms the transaction and the sBTC is issued to you. Then return to BitYield
+                      and refresh your balance.
+                    </li>
+                  </ol>
+                  <p>
+                    BitYield does not run the bridge, it links you to the real flow. If something goes
+                    wrong while converting, the bridge&apos;s own support is the place to ask.
                   </p>
                 </Step>
                 <Step n={3} title="Make a deposit">
@@ -311,9 +335,9 @@ export default function DocsPage() {
             <Section id="security" title="Security and custody">
               <ul className="list-disc pl-5 space-y-2">
                 <li>
-                  <span className="text-zinc-300 font-medium">Self-custody.</span> Your Bitcoin is held
-                  as sBTC, secured by Bitcoin L1 consensus, with no third-party wrapping or bridge
-                  custodian. Only you can withdraw your position.
+                  <span className="text-zinc-300 font-medium">Self-custody.</span> You hold your sBTC
+                  under your own keys until you deposit. sBTC itself is backed by BTC held by the sBTC
+                  signers, so its peg depends on them. Only you can withdraw your position.
                 </li>
                 <li>
                   <span className="text-zinc-300 font-medium">Non-custodial router.</span> BitYield&apos;s
@@ -375,8 +399,9 @@ export default function DocsPage() {
                 <div>
                   <h3 className="font-semibold text-white mb-1">Is my Bitcoin bridged to another chain?</h3>
                   <p className="text-sm">
-                    No. sBTC is 1:1 Bitcoin-backed and secured by Bitcoin L1. Your Bitcoin does not
-                    leave Bitcoin, it just starts working.
+                    Converting BTC to sBTC uses the official sBTC bridge: your BTC is locked with the sBTC
+                    signers on Bitcoin and sBTC is issued 1:1 on Stacks. BitYield runs no bridge of its
+                    own, and you can redeem sBTC for BTC through the official bridge.
                   </p>
                 </div>
                 <div>
