@@ -2,12 +2,13 @@
 // yield-router, who first funded it? Answers "was each wallet funded
 // independently?" from on-chain data only (read-only, no keys needed).
 //
-//   node contracts/scripts/funding-report.mjs [--team SP...,SP...] [--json out.json]
+//   TEAM_WALLETS=SP...,SP... node contracts/scripts/funding-report.mjs [--json out.json]
+//   (or pass --team SP...,SP...). Team wallets are not stored in this repo.
 //
 // For each depositor it reports the FIRST inflow of sBTC (a bridge mint, i.e. the
 // user bridged real BTC, or a transfer from another address) and the FIRST inflow
 // of STX, then classifies each funder:
-//   team         address in the team list (defaults below + --team / TEAM_WALLETS)
+//   team         address in the team list you supply (--team / TEAM_WALLETS)
 //   team-linked  not on the list, but a team wallet has sent it / received from it
 //   bityield     a BitYield contract (e.g. a strategy paying out a withdrawal)
 //   depositor    another wallet that also deposited through the router
@@ -24,22 +25,14 @@ const HIRO = process.env.HIRO_API_URL ?? 'https://api.mainnet.hiro.so';
 const ROUTER = process.env.YIELD_ROUTER ?? 'SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB.yield-router';
 const SBTC = 'SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token';
 
-// Known team-controlled addresses. CONFIRM and extend these before relying on the output.
-const DEFAULT_TEAM = {
-  SP1G1G7BSX87T8Y54RBDSCN2KMCT0N1XMN24R7KPQ: 'test wallet (Marvy)',
-  SP2JS7GJEYRD7MAD5CF9EHSTN1MNA9E219TZ6PJT3: 'team wallet (funded SP158DG8..., Aug-Sep deposits)',
-  SP37FXV56C8S6TNYGVTB06TE9Y449638WG9VK71YB: 'M2 deployer',
-  SP1FMF8WWHPNW2X20N0SCV6Q144K2GNQG8K6YDND3: 'fee sponsor',
-};
-
 const args = process.argv.slice(2);
 const argVal = (flag) => {
   const i = args.indexOf(flag);
   return i >= 0 ? args[i + 1] : undefined;
 };
-const team = { ...DEFAULT_TEAM };
+const team = {};
 for (const a of [...(argVal('--team')?.split(',') ?? []), ...(process.env.TEAM_WALLETS?.split(',') ?? [])]) {
-  if (a.trim()) team[a.trim()] = 'team (from --team/TEAM_WALLETS)';
+  if (a.trim()) team[a.trim()] = 'team';
 }
 
 const headers = process.env.HIRO_API_KEY ? { 'x-api-key': process.env.HIRO_API_KEY } : {};
@@ -85,7 +78,7 @@ let teamLinked = new Set();
 function classify(addr) {
   if (!addr) return { kind: 'none' };
   if (team[addr]) return { kind: 'team', note: team[addr] };
-  if (addr.startsWith(`${BITYIELD_PREFIX}.`)) return { kind: 'bityield' };
+  if (addr === BITYIELD_PREFIX || addr.startsWith(`${BITYIELD_PREFIX}.`)) return { kind: 'bityield' };
   if (depositors.has(addr)) return { kind: 'depositor' };
   if (teamLinked.has(addr)) return { kind: 'team-linked' };
   return { kind: 'external' };

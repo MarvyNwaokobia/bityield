@@ -3,3 +3,10 @@
 docs/demo-script.md
 docs/outreach-zest.md
 docs/outreach-dual-stacking.md
+
+# Google Apps Script files (the beta log script is deployed from Google, not this repo)
+*.gs
+
+# Local-only files
+team.json
+Icon?
