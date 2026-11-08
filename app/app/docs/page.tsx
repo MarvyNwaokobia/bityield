@@ -407,7 +407,10 @@ export default function DocsPage() {
                 <div>
                   <h3 className="font-semibold text-white mb-1">Can BitYield move my funds?</h3>
                   <p className="text-sm">
-                    No. Positions are recorded to your address, and only you can withdraw yours.
+                    The router cannot send your funds to anyone else, and only you can withdraw your position through
+                    it. But during this controlled beta, one owner key controls the strategy contracts and has
+                    emergency functions that can move the funds they hold. That is why this is a beta: a public
+                    launch is gated on an independent audit and moving ownership to a multisig.
                   </p>
                 </div>
                 <div>

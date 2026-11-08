@@ -85,7 +85,7 @@ export default function DepositPage() {
   const [balanceSats, setBalanceSats] = useState<bigint | null>(null);
   const [balanceError, setBalanceError] = useState(false);
   const [amount, setAmount] = useState('0');
-  const [selectedStrategy, setSelectedStrategy] = useState<StrategyName>('zest');
+  const [selectedStrategy, setSelectedStrategy] = useState<StrategyName>('dual-stacking');
   const [phase, setPhase] = useState<TxPhase>('signing');
   const [txid, setTxid] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -527,6 +527,11 @@ export default function DepositPage() {
                     <li>
                       <span className="text-zinc-300 font-medium">Smart-contract risk.</span> These contracts are running on
                       {NETWORK_NAME === 'mainnet' ? ' mainnet' : ' Stacks testnet'} and are not yet independently audited. Deposit only what you are comfortable testing with.
+                    </li>
+                    <li>
+                      <span className="text-zinc-300 font-medium">Admin key risk.</span> One owner key controls these
+                      contracts and has emergency functions that can move the funds they hold. Ownership moves to a
+                      multisig before any public launch.
                     </li>
                     <li>
                       <span className="text-zinc-300 font-medium">sBTC peg risk.</span> sBTC is backed 1:1 by BTC held by the sBTC
