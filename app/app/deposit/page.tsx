@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
 import { getSbtcBalanceSats } from '@/lib/stacks/balances';
@@ -11,6 +11,7 @@ import { submitDepositTx, type TxPhase } from '@/lib/stacks/tx';
 import { satsToBtc, SATS_PER_BTC, formatApyPercent } from '@/lib/stacks/format';
 import { trackEvent } from '@/lib/track';
 import { fadeSlideUp, staggerContainer } from '@/lib/motion';
+import { STRATEGY_OPTIONS } from '@/lib/strategies';
 import { Logo } from '../components/Logo';
 import { ConnectPrompt } from '../components/ConnectPrompt';
 import { ErrorCard, PendingCard, SuccessCard } from '../components/TransactionStatus';
@@ -20,48 +21,6 @@ import { StrategyName, SBTC_ACQUIRE_URL, NETWORK_NAME, explorerContractUrl, expl
 
 type Step = 'amount' | 'confirm' | 'pending' | 'success' | 'error';
 
-type RouteStatus = 'live' | 'deployed' | 'preview';
-
-interface StrategyOption {
-  id: StrategyName;
-  name: string;
-  apy: number;
-  targetProtocol: string;
-  risk: 'Low' | 'Medium';
-  status: RouteStatus;
-  desc: string;
-  riskNote: string;
-  disabled?: boolean;
-}
-
-// Honest, per-route status: 'live' routes real sBTC into the named protocol on
-// Bitcoin mainnet today. 'deployed' means the live contract is on mainnet and
-// registered, but has not yet completed a full real-fund test. 'preview' means
-// BitYield's own strategy contract paying a fixed, admin-set APY, modelling
-// the target protocol without routing to it. See the Risk & disclosures panel
-// on confirm for the route-specific detail.
-//
-// `apy` below is the fallback shown before/if the live read (see
-// `getLiveApyPercent`) resolves — Zest and Dual Stacking both replace it with
-// the real on-chain rate once loaded, since both now have a verified
-// conversion from the strategy's raw `get-apy`.
-const STRATEGY_OPTIONS: StrategyOption[] = [
-  {
-    id: 'zest', name: 'Zest Lending', apy: 4.5, targetProtocol: 'Zest Protocol', risk: 'Low', status: 'live',
-    desc: 'Routes your sBTC into real Zest Protocol lending on Bitcoin mainnet. The rate shown is read live from Zest’s sBTC reserve.',
-    riskNote: 'This route is live on Bitcoin mainnet: your deposit is actually supplied into Zest Protocol’s lending pool. It is a new deployment, unaudited, and has had limited real-world testing so far — deposit only a small amount you are comfortable testing with.',
-  },
-  {
-    id: 'dual-stacking', name: 'Dual Stacking', apy: 8.5, targetProtocol: 'Stacks PoX', risk: 'Low', status: 'live',
-    desc: 'Enrolls your sBTC in the Stacks network’s own Dual Stacking rewards program. A full deposit-and-withdraw round trip is confirmed on mainnet; actual reward payout is still pending its first reward cycle.',
-    riskNote: 'This route is live on Bitcoin mainnet: your deposit is actually enrolled in the real Stacks Dual Stacking rewards program, and a full deposit-and-withdraw round trip has been confirmed on-chain. It is a new deployment, unaudited, and reward payout has not been confirmed yet (enrollment activates the following reward cycle, roughly two weeks) — deposit only a small amount you are comfortable testing with.',
-  },
-  {
-    id: 'hermetica', name: 'Hermetica Structured', apy: 6.2, targetProtocol: 'Hermetica', risk: 'Medium', status: 'preview',
-    desc: 'Models Hermetica structured yield. Today a BitYield strategy contract paying a fixed 6.2% APY. Live routing is on the roadmap.',
-    riskNote: 'Preview strategy. Hermetica Structured is a BitYield strategy contract paying a fixed 6.2% APY. It models Hermetica but does not route to it yet; the rate is set by the contract, not live market yield.',
-  },
-];
 
 // Where a user can read about the underlying protocol itself, not just
 // BitYield's summary of it.
@@ -77,15 +36,21 @@ const PROTOCOL_LINKS: Partial<Record<StrategyName, string>> = {
 const ZEST_NEAR_ZERO_NOTE =
   'Zest’s sBTC reserve currently has very low borrowing demand, so the real supply rate is near zero. This is the true live rate, not a display error — it moves with Zest’s own market conditions.';
 
-export default function DepositPage() {
+function DepositInner() {
   const { address, isConnected } = useWallet();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const requested = searchParams.get('strategy');
 
   const [step, setStep] = useState<Step>('amount');
   const [balanceSats, setBalanceSats] = useState<bigint | null>(null);
   const [balanceError, setBalanceError] = useState(false);
   const [amount, setAmount] = useState('0');
-  const [selectedStrategy, setSelectedStrategy] = useState<StrategyName>('dual-stacking');
+  const [selectedStrategy, setSelectedStrategy] = useState<StrategyName>(
+    STRATEGY_OPTIONS.some((o) => o.id === requested && o.status === 'live')
+      ? (requested as StrategyName)
+      : 'dual-stacking'
+  );
   const [phase, setPhase] = useState<TxPhase>('signing');
   const [txid, setTxid] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -648,5 +613,13 @@ export default function DepositPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function DepositPage() {
+  return (
+    <Suspense fallback={<div className="bg-[#0a0a0a] min-h-screen" />}>
+      <DepositInner />
+    </Suspense>
   );
 }

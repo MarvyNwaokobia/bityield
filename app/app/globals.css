@@ -3,6 +3,10 @@
 @theme {
   --color-bitcoin: #f7931a;
   --color-bitcoin-dark: #e8841a;
+  --color-surface: #101012;
+  --color-surface-2: #17171a;
+  --color-line: #232327;
+  --color-gain: #34d399;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-space-grotesk), var(--font-inter), sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
@@ -105,6 +109,29 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .animate-floaty {
+    animation: none;
+  }
+}
+
+/* App shell: respect the iOS home indicator under the bottom tab bar. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Loading placeholder shimmer. */
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+.skeleton {
+  background: linear-gradient(90deg, #17171a 25%, #202024 50%, #17171a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 0.5rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
     animation: none;
   }
 }
