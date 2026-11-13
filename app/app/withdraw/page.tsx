@@ -1,9 +1,7 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { Logo } from '../components/Logo';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
 import { getPositions, type Position } from '@/lib/stacks/contract';
@@ -11,11 +9,14 @@ import { submitWithdrawTx, type TxPhase } from '@/lib/stacks/tx';
 import { trackEvent } from '@/lib/track';
 import { type StrategyName, explorerTxUrl } from '@/lib/stacks/network';
 import { formatBtc, satsToBtc, formatApyPercent } from '@/lib/stacks/format';
-import { fadeSlideUp, hoverScale, springTransition, staggerContainer } from '@/lib/motion';
+import { fadeSlideUp } from '@/lib/motion';
 import { ConnectPrompt } from '../components/ConnectPrompt';
 import { ErrorCard, PendingCard, SuccessCard } from '../components/TransactionStatus';
 import { AnimatedNumber } from '../components/AnimatedNumber';
-import { PrimaryButton, PrimaryLinkButton, SecondaryButton } from '../components/Button';
+import { PrimaryButton, PrimaryLinkButton } from '../components/Button';
+import { FlowShell } from '../components/app/FlowShell';
+import { Chip, Skeleton, StrategyAvatar, SummaryRow, strategyLabel } from '../components/app/ui';
+import { ChevronRightIcon } from '../components/app/Icons';
 
 type Step = 'select' | 'confirm' | 'pending' | 'success' | 'error';
 
@@ -105,243 +106,156 @@ function WithdrawPageInner() {
   const totalSats = selected ? selected.amountSats + selected.accruedYieldSats : 0n;
   const apy = selected ? selected.displayApyPercent : 0;
 
+
+  const goToList = () => {
+    setSelected(null);
+    setStep('select');
+  };
+
+  const shellTitle =
+    step === 'confirm' ? 'Review withdrawal' : step === 'pending' ? 'Withdrawing' : step === 'success' ? 'Done' : step === 'error' ? 'Withdrawal failed' : 'Withdraw';
+  const showProgress = isConnected && (step === 'select' || step === 'confirm') && positions !== null && positions.length > 0;
+
   return (
-    <div className="bg-[#0a0a0a] text-white min-h-screen flex flex-col">
-      <nav className="px-6 py-4 flex items-center justify-between border-b border-zinc-800/50">
-        <Logo />
-        <Link href="/dashboard" className="text-sm text-zinc-500 hover:text-white transition-colors">
-          ← Back to Dashboard
-        </Link>
-      </nav>
+    <FlowShell
+      title={shellTitle}
+      step={showProgress ? (step === 'select' ? 1 : 2) : undefined}
+      total={showProgress ? 2 : undefined}
+      onBack={step === 'confirm' && !preselectId ? goToList : undefined}
+      close={step === 'success' || step === 'error'}
+      footer={
+        step === 'confirm' && selected ? (
+          <PrimaryButton onClick={handleConfirm} className="w-full px-6 py-4 text-base">
+            Confirm withdrawal
+          </PrimaryButton>
+        ) : undefined
+      }
+    >
+      <AnimatePresence mode="wait">
+        {!isConnected && step === 'select' && (
+          <motion.div key="connect" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="my-auto">
+            <ConnectPrompt description="Connect your Stacks wallet to see your positions and withdraw." />
+          </motion.div>
+        )}
 
-      <main className="flex-1 flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-md">
-          <AnimatePresence mode="wait">
-            {!isConnected && step === 'select' && (
-              <motion.div key="connect" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <ConnectPrompt description="Connect your Stacks wallet to see your positions and withdraw." />
-              </motion.div>
-            )}
+        {isConnected && step === 'select' && positions === null && (
+          <motion.div key="loading" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="space-y-3 pt-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </motion.div>
+        )}
 
-            {isConnected && step === 'select' && positions === null && (
-              <motion.div
-                key="loading"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={fadeSlideUp}
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center"
-              >
-                <div className="flex justify-center mb-4">
-                  <div className="w-10 h-10 border-4 border-zinc-700 border-t-bitcoin rounded-full animate-spin" />
-                </div>
-                <p className="text-zinc-400">Loading your positions…</p>
-              </motion.div>
-            )}
+        {isConnected && step === 'select' && positions !== null && positions.length === 0 && (
+          <motion.div key="empty" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="my-auto text-center">
+            <p className="font-display text-xl font-semibold mb-2">Nothing to withdraw yet</p>
+            <p className="mx-auto mb-8 max-w-sm text-sm leading-relaxed text-zinc-400">
+              You don&apos;t have any open positions. Make a deposit to start earning, then come back here anytime to
+              withdraw.
+            </p>
+            <PrimaryLinkButton href="/deposit" className="w-full px-6 py-4 text-base">
+              Make a deposit
+            </PrimaryLinkButton>
+          </motion.div>
+        )}
 
-            {isConnected && step === 'select' && positions !== null && positions.length === 0 && (
-              <motion.div
-                key="empty"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={fadeSlideUp}
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center"
-              >
-                <p className="text-xl font-semibold mb-2">Nothing to withdraw yet</p>
-                <p className="text-zinc-400 mb-8 leading-relaxed">
-                  You don&apos;t have any open positions. Make a deposit to start earning, then come
-                  back here anytime to withdraw.
-                </p>
-                <PrimaryLinkButton href="/deposit" className="w-full px-6 py-4">
-                  Make a Deposit
-                </PrimaryLinkButton>
-              </motion.div>
-            )}
-
-            {isConnected && step === 'select' && positions !== null && positions.length > 0 && (
-              <motion.div
-                key="list"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={staggerContainer}
-                className="space-y-4"
-              >
-                <motion.p variants={fadeSlideUp} className="text-zinc-500 text-sm uppercase tracking-widest">
-                  Your Positions
-                </motion.p>
-                {positions.map((p) => {
-                  const getStrategyDisplayName = (strategyName: string) => {
-                    if (strategyName === 'zest') return 'Zest Lending';
-                    if (strategyName === 'hermetica') return 'Hermetica Structured';
-                    if (strategyName === 'dual-stacking') return 'Dual Stacking';
-                    return 'Mock Yield';
-                  };
-                  return (
-                    <motion.div
-                      key={p.id}
-                      variants={fadeSlideUp}
-                      whileHover={{ ...hoverScale, y: -4 }}
-                      transition={springTransition}
-                      className="glow-card bg-zinc-900 border border-zinc-800 rounded-2xl p-6 flex items-center justify-between gap-4"
-                    >
-                      <div>
-                        <div className="flex items-center gap-2 mb-1.5">
-                          <span className="text-[9px] px-2.5 py-0.5 rounded-full font-bold bg-bitcoin/10 text-bitcoin border border-bitcoin/20 uppercase tracking-wider">
-                            {getStrategyDisplayName(p.strategy)}
-                          </span>
-                        </div>
-                        <p className="font-display text-2xl font-bold">
-                          {formatBtc(p.amountSats + p.accruedYieldSats)} BTC
-                        </p>
-                        <p className="text-zinc-500 text-sm mt-1">
-                          {formatBtc(p.amountSats)} BTC principal + {formatBtc(p.accruedYieldSats)} BTC
-                          earned · {formatApyPercent(p.displayApyPercent)} APY
-                        </p>
-                      </div>
-                      <PrimaryButton
-                        onClick={() => {
-                          setSelected(p);
-                          setStep('confirm');
-                        }}
-                        className="px-5 py-3 whitespace-nowrap"
-                      >
-                        Withdraw
-                      </PrimaryButton>
-                    </motion.div>
-                  );
-                })}
-              </motion.div>
-            )}
-
-            {step === 'confirm' && selected && (
-              <motion.div
-                key="confirm"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={fadeSlideUp}
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8"
-              >
-                <p className="text-zinc-500 text-sm uppercase tracking-widest mb-6">
-                  Review Withdrawal
-                </p>
-
-                <motion.div
-                  initial="initial"
-                  animate="animate"
-                  variants={staggerContainer}
-                  className="space-y-4 mb-8"
+        {isConnected && step === 'select' && positions !== null && positions.length > 0 && (
+          <motion.div key="list" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="space-y-4">
+            <p className="text-sm text-zinc-500">Choose a position to withdraw. Everything earned so far comes with it.</p>
+            <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+              {positions.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setSelected(p);
+                    setStep('confirm');
+                  }}
+                  className="flex w-full items-center gap-3 px-4 py-4 text-left transition-colors hover:bg-surface-2"
                 >
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">You receive</span>
-                    <span className="font-display text-2xl font-bold">
-                      <AnimatedNumber value={satsToBtc(totalSats)} formatter={(n) => n.toFixed(8)} /> BTC
-                    </span>
-                  </motion.div>
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">Strategy</span>
-                    <span className="font-semibold uppercase tracking-wider text-[10px] bg-bitcoin/10 text-bitcoin border border-bitcoin/20 px-2 py-0.5 rounded-full">
-                      {selected.strategy === 'zest' ? 'Zest Lending' : selected.strategy === 'hermetica' ? 'Hermetica Structured' : selected.strategy === 'dual-stacking' ? 'Dual Stacking' : 'Mock Yield'}
-                    </span>
-                  </motion.div>
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">Principal</span>
-                    <span className="font-mono">{formatBtc(selected.amountSats)} BTC</span>
-                  </motion.div>
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">Yield earned</span>
-                    <span className="font-mono text-bitcoin">
-                      +{formatBtc(selected.accruedYieldSats)} BTC
-                    </span>
-                  </motion.div>
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">APY</span>
-                    <span>{formatApyPercent(apy)}, paid in Bitcoin</span>
-                  </motion.div>
-                </motion.div>
-
-                <p className="text-zinc-500 text-sm mb-8 leading-relaxed">
-                  Your full balance, including everything earned so far, is sent back to your
-                  wallet on Bitcoin L1.
-                </p>
-
-                <div className="flex gap-3">
-                  <SecondaryButton
-                    onClick={() => {
-                      setSelected(null);
-                      setStep('select');
-                    }}
-                    className="flex-1 px-6 py-4"
-                  >
-                    Back
-                  </SecondaryButton>
-                  <PrimaryButton onClick={handleConfirm} className="flex-1 px-6 py-4">
-                    Confirm Withdrawal
-                  </PrimaryButton>
-                </div>
-              </motion.div>
-            )}
-
-            {step === 'pending' && (
-              <motion.div key="pending" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <PendingCard phase={phase} explorerUrl={txid ? explorerTxUrl(txid) : undefined} footer={`Withdrawing ${formatBtc(totalSats)} BTC`} />
-              </motion.div>
-            )}
-
-            {step === 'success' && (
-              <motion.div key="success" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <SuccessCard
-                  title="Withdrawal complete"
-                  description={`${formatBtc(withdrawnTotalSats)} BTC has been sent back to your wallet on Bitcoin L1.`}
-                  onDone={() => router.push('/dashboard')}
-                  doneLabel="View dashboard"
-                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
-                >
-                  <div className="bg-black border border-zinc-800 rounded-xl p-6 mb-8">
-                    <p className="text-zinc-500 text-sm">
-                      <Link href="/dashboard" className="text-bitcoin hover:underline">
-                        View your dashboard
-                      </Link>
+                  <StrategyAvatar name={p.strategy} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{strategyLabel(p.strategy)}</p>
+                    <p className="mt-0.5 text-xs text-zinc-500">
+                      {formatApyPercent(p.displayApyPercent)} APY · +{formatBtc(p.accruedYieldSats)} earned
                     </p>
                   </div>
-                </SuccessCard>
-              </motion.div>
-            )}
+                  <p className="font-mono text-sm tabular-nums">{formatBtc(p.amountSats + p.accruedYieldSats)}</p>
+                  <ChevronRightIcon className="h-4 w-4 text-zinc-600" />
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
-            {step === 'error' && (
-              <motion.div key="error" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <ErrorCard
-                  title="We couldn't confirm your withdrawal"
-                  description={
-                    errorMessage ?? 'Something went wrong. Your position has not changed. Please try again.'
-                  }
-                  onCancel={() => {
-                    setSelected(null);
-                    setStep('select');
-                  }}
-                  onRetry={() => setStep('confirm')}
-                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
-    </div>
+        {step === 'confirm' && selected && (
+          <motion.div key="confirm" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="space-y-5">
+            <div className="pt-2 text-center">
+              <p className="text-sm text-zinc-500">You receive</p>
+              <p className="mt-1 font-display text-4xl font-bold tabular-nums tracking-tight">
+                <AnimatedNumber value={satsToBtc(totalSats)} formatter={(n) => n.toFixed(8)} />
+                <span className="ml-2 text-lg font-semibold text-zinc-500">BTC</span>
+              </p>
+            </div>
+
+            <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+              <SummaryRow label="From">
+                <span className="inline-flex items-center gap-2">
+                  {strategyLabel(selected.strategy)}
+                  {selected.yieldIsLive ? <Chip tone="green">Live</Chip> : <Chip tone="gray">Estimated</Chip>}
+                </span>
+              </SummaryRow>
+              <SummaryRow label="Principal">
+                <span className="font-mono">{formatBtc(selected.amountSats)} BTC</span>
+              </SummaryRow>
+              <SummaryRow label="Yield earned">
+                <span className="font-mono text-emerald-400">+{formatBtc(selected.accruedYieldSats)} BTC</span>
+              </SummaryRow>
+              <SummaryRow label="Rate">{formatApyPercent(apy)} APY</SummaryRow>
+            </div>
+
+            <p className="text-center text-sm leading-relaxed text-zinc-500">
+              Your full balance, including everything earned so far, is sent back to your wallet on Bitcoin L1.
+            </p>
+          </motion.div>
+        )}
+
+        {step === 'pending' && (
+          <motion.div key="pending" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="flex flex-1 flex-col">
+            <PendingCard phase={phase} explorerUrl={txid ? explorerTxUrl(txid) : undefined} footer={`Withdrawing ${formatBtc(totalSats)} BTC`} />
+          </motion.div>
+        )}
+
+        {step === 'success' && (
+          <motion.div key="success" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="flex flex-1 flex-col">
+            <SuccessCard
+              title="Withdrawal complete"
+              description={`${formatBtc(withdrawnTotalSats)} BTC has been sent back to your wallet on Bitcoin L1.`}
+              onDone={() => router.push('/dashboard')}
+              doneLabel="Back to Home"
+              explorerUrl={txid ? explorerTxUrl(txid) : undefined}
+            />
+          </motion.div>
+        )}
+
+        {step === 'error' && (
+          <motion.div key="error" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="flex flex-1 flex-col">
+            <ErrorCard
+              title="We couldn't confirm your withdrawal"
+              description={errorMessage ?? 'Something went wrong. Your position has not changed. Please try again.'}
+              onCancel={goToList}
+              onRetry={() => setStep('confirm')}
+              explorerUrl={txid ? explorerTxUrl(txid) : undefined}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </FlowShell>
   );
 }
 
 export default function WithdrawPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="bg-[#0a0a0a] text-white min-h-screen flex items-center justify-center">
-          <div className="w-10 h-10 border-4 border-zinc-700 border-t-bitcoin rounded-full animate-spin" />
-        </div>
-      }
-    >
+    <Suspense fallback={<div className="min-h-dvh bg-[#0a0a0a]" />}>
       <WithdrawPageInner />
     </Suspense>
   );

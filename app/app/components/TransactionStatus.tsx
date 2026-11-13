@@ -69,6 +69,29 @@ function StepCircle({ status }: { status: 'done' | 'active' | 'upcoming' }) {
   return <div className="w-8 h-8 rounded-full border-2 border-zinc-700" />;
 }
 
+/** Short celebratory spray of orange dots behind the success check. */
+function Burst() {
+  const reducedMotion = useReducedMotion();
+  if (reducedMotion) return null;
+  return (
+    <span aria-hidden="true" className="pointer-events-none absolute inset-0 flex items-center justify-center">
+      {Array.from({ length: 14 }).map((_, i) => {
+        const angle = (i / 14) * Math.PI * 2;
+        const dist = 70 + (i % 3) * 18;
+        return (
+          <motion.span
+            key={i}
+            className={`absolute rounded-full ${i % 2 ? 'h-2 w-2 bg-bitcoin' : 'h-1.5 w-1.5 bg-amber-300'}`}
+            initial={{ x: 0, y: 0, opacity: 1, scale: 1 }}
+            animate={{ x: Math.cos(angle) * dist, y: Math.sin(angle) * dist, opacity: 0, scale: 0.4 }}
+            transition={{ duration: 0.9, ease: 'easeOut', delay: 0.25 }}
+          />
+        );
+      })}
+    </span>
+  );
+}
+
 export function PendingCard({
   phase,
   footer,
@@ -82,8 +105,8 @@ export function PendingCard({
   const currentIndex = PHASE_ORDER.indexOf(phase);
 
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center">
-      <div className="flex items-center justify-center mb-8">
+    <div className="flex flex-1 flex-col items-center justify-center py-10 text-center">
+      <div className="flex items-center justify-center mb-10">
         {PHASE_ORDER.map((p, i) => (
           <div key={p} className="flex items-center">
             <div className="flex flex-col items-center gap-2">
@@ -110,8 +133,8 @@ export function PendingCard({
         ))}
       </div>
 
-      <p className="font-display text-xl font-semibold mb-2">{title}</p>
-      <p className="text-zinc-400">{subtitle}</p>
+      <p className="font-display text-2xl font-semibold mb-2">{title}</p>
+      <p className="max-w-xs text-zinc-400 leading-relaxed">{subtitle}</p>
 
       {phase === 'confirming' && explorerUrl && (
         <div className="mt-4">
@@ -126,7 +149,7 @@ export function PendingCard({
         </div>
       )}
 
-      {footer && <p className="text-zinc-600 text-sm mt-6">{footer}</p>}
+      {footer && <p className="mt-8 rounded-full border border-line bg-surface px-4 py-2 text-sm text-zinc-400">{footer}</p>}
     </div>
   );
 }
@@ -151,23 +174,24 @@ export function SuccessCard({
       initial={{ opacity: 0, scale: 0.94 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={springTransition}
-      className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center"
+      className="flex flex-1 flex-col justify-center py-6 text-center"
     >
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ ...springTransition, delay: 0.1 }}
-        className="flex justify-center mb-6"
+        className="relative mx-auto mb-6 flex justify-center"
       >
-        <div className="w-14 h-14 rounded-full bg-bitcoin/10 border border-bitcoin flex items-center justify-center text-bitcoin shadow-[0_0_24px_-4px_rgba(247,147,26,0.6)]">
-          <CheckIcon className="w-6 h-6" />
+        <Burst />
+        <div className="relative w-20 h-20 rounded-full bg-bitcoin flex items-center justify-center text-black shadow-[0_0_40px_-6px_rgba(247,147,26,0.7)]">
+          <CheckIcon className="w-9 h-9" />
         </div>
       </motion.div>
       <motion.div initial="initial" animate="animate" variants={staggerContainer}>
-        <motion.p variants={fadeSlideUp} className="font-display text-xl font-semibold mb-2">
+        <motion.p variants={fadeSlideUp} className="font-display text-3xl font-bold mb-2">
           {title}
         </motion.p>
-        <motion.p variants={fadeSlideUp} className="text-zinc-400 mb-8 leading-relaxed">
+        <motion.p variants={fadeSlideUp} className="mx-auto mb-8 max-w-xs text-zinc-400 leading-relaxed">
           {description}
         </motion.p>
         {children && <motion.div variants={fadeSlideUp}>{children}</motion.div>}
@@ -184,7 +208,7 @@ export function SuccessCard({
           </motion.div>
         )}
         <motion.div variants={fadeSlideUp}>
-          <PrimaryButton onClick={onDone} className="w-full px-6 py-4">
+          <PrimaryButton onClick={onDone} className="w-full px-6 py-4 text-base">
             {doneLabel}
           </PrimaryButton>
         </motion.div>
@@ -217,15 +241,15 @@ export function ErrorCard({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1, x: reducedMotion ? 0 : [0, -8, 8, -8, 8, 0] }}
       transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center"
+      className="flex flex-1 flex-col justify-center py-6 text-center"
     >
       <div className="flex justify-center mb-6">
-        <div className="w-14 h-14 rounded-full bg-red-500/10 border border-red-500 flex items-center justify-center text-2xl text-red-500 shadow-[0_0_24px_-4px_rgba(239,68,68,0.55)]">
+        <div className="w-20 h-20 rounded-full bg-red-500/10 border border-red-500 flex items-center justify-center text-3xl text-red-500 shadow-[0_0_30px_-6px_rgba(239,68,68,0.55)]">
           !
         </div>
       </div>
-      <p className="font-display text-xl font-semibold mb-2">{title}</p>
-      <p className="text-zinc-400 mb-6 leading-relaxed">{description}</p>
+      <p className="font-display text-2xl font-bold mb-2">{title}</p>
+      <p className="mx-auto mb-6 max-w-xs text-zinc-400 leading-relaxed">{description}</p>
       {explorerUrl && (
         <p className="mb-6">
           <a

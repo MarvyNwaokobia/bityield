@@ -1,7 +1,6 @@
 'use client';
 
 import { Suspense, useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useWallet } from '@/lib/stacks/wallet';
@@ -10,13 +9,15 @@ import { getLiveApyPercent } from '@/lib/stacks/contract';
 import { submitDepositTx, type TxPhase } from '@/lib/stacks/tx';
 import { satsToBtc, SATS_PER_BTC, formatApyPercent } from '@/lib/stacks/format';
 import { trackEvent } from '@/lib/track';
-import { fadeSlideUp, staggerContainer } from '@/lib/motion';
+import { fadeSlideUp } from '@/lib/motion';
 import { STRATEGY_OPTIONS } from '@/lib/strategies';
-import { Logo } from '../components/Logo';
 import { ConnectPrompt } from '../components/ConnectPrompt';
+import { FlowShell } from '../components/app/FlowShell';
+import { Keypad, applyAmountKey } from '../components/app/Keypad';
+import { Chip, Skeleton, SummaryRow } from '../components/app/ui';
 import { ErrorCard, PendingCard, SuccessCard } from '../components/TransactionStatus';
 import { AnimatedNumber } from '../components/AnimatedNumber';
-import { PrimaryButton, SecondaryButton } from '../components/Button';
+import { PrimaryButton } from '../components/Button';
 import { StrategyName, SBTC_ACQUIRE_URL, NETWORK_NAME, explorerContractUrl, explorerTxUrl, strategyContractId, YIELD_ROUTER, toContractId } from '@/lib/stacks/network';
 
 type Step = 'amount' | 'confirm' | 'pending' | 'success' | 'error';
@@ -82,7 +83,6 @@ function DepositInner() {
     try {
       const sats = await getSbtcBalanceSats(address);
       setBalanceSats(sats);
-      setAmount(sats > 0n ? satsToBtc(sats).toFixed(8) : '0');
     } catch {
       // A failed read must never look like an empty wallet, so surface a retry.
       setBalanceSats(null);
@@ -123,6 +123,7 @@ function DepositInner() {
       });
       if (outcome.status === 'success') {
         setDepositedSats(amountSats);
+        setAmount('0');
         await refreshBalance();
         setStep('success');
         trackEvent('deposit_completed', {
@@ -153,472 +154,337 @@ function DepositInner() {
     }
   };
 
+
+  const pressKey = useCallback((k: string) => setAmount((prev) => applyAmountKey(prev, k)), []);
+  const setFraction = (f: number) => {
+    if (balanceSats === null) return;
+    const sats = f >= 1 ? balanceSats : BigInt(Math.floor(Number(balanceSats) * f));
+    setAmount(sats > 0n ? satsToBtc(sats).toFixed(8).replace(/\.?0+$/, '') : '0');
+  };
+  const zestNearZero = liveApyPercent[selectedStrategy] !== undefined && liveApyPercent[selectedStrategy]! < 0.01;
+  const hasBalance = balanceSats !== null && balanceSats > 0n;
+  const onAmountStep = isConnected && step === 'amount' && hasBalance;
+  const canContinue = numericAmount > 0 && !overBalance && !selectedStrategyOption.disabled;
+
+  const shellTitle =
+    step === 'confirm' ? 'Review deposit' : step === 'pending' ? 'Depositing' : step === 'success' ? 'Done' : step === 'error' ? 'Deposit failed' : 'Deposit';
+
+  const footer =
+    onAmountStep ? (
+      <PrimaryButton onClick={() => setStep('confirm')} disabled={!canContinue} className="w-full px-6 py-4 text-base">
+        Continue
+      </PrimaryButton>
+    ) : step === 'confirm' ? (
+      <PrimaryButton onClick={handleConfirm} className="w-full px-6 py-4 text-base">
+        Confirm deposit
+      </PrimaryButton>
+    ) : undefined;
+
   return (
-    <div className="bg-[#0a0a0a] text-white min-h-screen flex flex-col">
-      <nav className="px-6 py-4 flex items-center justify-between border-b border-zinc-800/50">
-        <Logo />
-        <Link href="/dashboard" className="text-sm text-zinc-500 hover:text-white transition-colors">
-          ← Back to Dashboard
-        </Link>
-      </nav>
+    <FlowShell
+      title={shellTitle}
+      step={step === 'amount' && hasBalance ? 1 : step === 'confirm' ? 2 : undefined}
+      total={step === 'amount' && hasBalance ? 2 : step === 'confirm' ? 2 : undefined}
+      onBack={step === 'confirm' ? () => setStep('amount') : undefined}
+      close={step === 'success' || step === 'error'}
+      footer={footer}
+    >
+      <AnimatePresence mode="wait">
+        {!isConnected && step === 'amount' && (
+          <motion.div key="connect" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="my-auto">
+            <ConnectPrompt description="Connect your Stacks wallet to see your sBTC balance and start earning." />
+          </motion.div>
+        )}
 
-      <main className="flex-1 flex flex-col items-center justify-center px-6 py-16">
-        <div className="w-full max-w-lg">
-          <AnimatePresence mode="wait">
-            {!isConnected && step === 'amount' && (
-              <motion.div key="connect" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <ConnectPrompt description="Connect your Stacks wallet to see your sBTC balance and start earning." />
-              </motion.div>
-            )}
+        {isConnected && step === 'amount' && balanceSats === null && !balanceError && (
+          <motion.div key="loading" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="space-y-6 pt-10">
+            <Skeleton className="mx-auto h-14 w-56" />
+            <Skeleton className="mx-auto h-4 w-32" />
+            <Skeleton className="h-16 w-full" />
+            <Skeleton className="h-56 w-full" />
+          </motion.div>
+        )}
 
-            {isConnected && step === 'amount' && balanceSats === null && !balanceError && (
-              <motion.div
-                key="loading"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={fadeSlideUp}
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center"
+        {isConnected && step === 'amount' && balanceError && (
+          <motion.div key="balance-error" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="my-auto space-y-4 text-center">
+            <div className="mx-auto w-fit rounded-full bg-amber-500/10 p-3 text-amber-400">
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <p className="mx-auto max-w-xs text-sm leading-relaxed text-zinc-400">
+              We couldn&apos;t load your balance just now. This is a network hiccup, not a problem with your wallet. Your
+              sBTC is safe.
+            </p>
+            <PrimaryButton onClick={refreshBalance} className="px-8 py-3 text-sm">
+              Retry
+            </PrimaryButton>
+          </motion.div>
+        )}
+
+        {isConnected && step === 'amount' && balanceSats !== null && balanceSats === 0n && (
+          <motion.div key="empty" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="my-auto space-y-5 text-center">
+            <div className="mx-auto w-fit rounded-full bg-bitcoin/10 p-4 text-bitcoin">
+              <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" />
+              </svg>
+            </div>
+            <p className="font-display text-xl font-semibold">No sBTC in this wallet yet</p>
+            <p className="mx-auto max-w-sm text-sm leading-relaxed text-zinc-400">
+              sBTC is 1:1 Bitcoin-backed. Get some via the{' '}
+              {NETWORK_NAME === 'mainnet'
+                ? 'official sBTC bridge (send BTC, receive sBTC at this wallet, usually about 20 to 40 minutes)'
+                : 'Hiro testnet faucet'}
+              , then come back and refresh.
+            </p>
+            <a href={SBTC_ACQUIRE_URL} target="_blank" rel="noopener noreferrer" className="block">
+              <PrimaryButton className="w-full px-6 py-4 text-base">
+                {NETWORK_NAME === 'mainnet' ? 'Open sBTC bridge ↗' : 'Open testnet faucet ↗'}
+              </PrimaryButton>
+            </a>
+            <button onClick={refreshBalance} className="cursor-pointer text-sm text-zinc-400 transition-colors hover:text-white">
+              I&apos;ve got sBTC, refresh balance
+            </button>
+          </motion.div>
+        )}
+
+        {onAmountStep && (
+          <motion.div key="amount" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="flex flex-1 flex-col">
+            {/* Amount display */}
+            <div className="pt-4 text-center">
+              <p
+                className={`font-display font-bold tabular-nums tracking-tight ${
+                  amount.length > 11 ? 'text-3xl' : amount.length > 8 ? 'text-4xl' : 'text-5xl'
+                } ${overBalance ? 'text-red-400' : amount === '0' ? 'text-zinc-600' : 'text-white'}`}
               >
-                <div className="flex justify-center mb-4">
-                  <div className="w-10 h-10 border-4 border-zinc-700 border-t-bitcoin rounded-full animate-spin" />
-                </div>
-                <p className="text-zinc-400">Loading your balance…</p>
-              </motion.div>
-            )}
+                {amount}
+                <span className="ml-2 text-lg font-semibold text-zinc-500">BTC</span>
+              </p>
+              <p className={`mt-2 text-sm ${overBalance ? 'text-red-400' : 'text-zinc-500'}`}>
+                {overBalance ? 'Amount exceeds your available balance' : `Available ${balanceBtc.toFixed(8)} BTC`}
+              </p>
+              <div className="mt-4 flex justify-center gap-2">
+                {[0.25, 0.5, 0.75, 1].map((f) => (
+                  <button
+                    key={f}
+                    type="button"
+                    onClick={() => setFraction(f)}
+                    className="rounded-full border border-line bg-surface px-3.5 py-1.5 text-xs font-semibold text-zinc-300 transition-colors hover:border-bitcoin/50 hover:text-bitcoin"
+                  >
+                    {f === 1 ? 'Max' : `${f * 100}%`}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-            {isConnected && step === 'amount' && balanceError && (
-              <motion.div
-                key="balance-error"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={fadeSlideUp}
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 text-center space-y-4"
-              >
-                <div className="text-amber-400 w-fit p-3 rounded-full bg-amber-500/10 mx-auto">
-                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            {/* Route picker */}
+            <div className="mt-6">
+              <div className="flex gap-2 overflow-x-auto pb-1" role="radiogroup" aria-label="Yield route">
+                {STRATEGY_OPTIONS.map((opt) => {
+                  const selected = selectedStrategy === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      disabled={opt.disabled}
+                      onClick={() => setSelectedStrategy(opt.id)}
+                      className={`min-w-[9.5rem] flex-1 rounded-xl border px-3 py-2.5 text-left transition-colors disabled:opacity-50 ${
+                        selected ? 'border-bitcoin bg-bitcoin/5' : 'border-line bg-surface hover:border-zinc-600'
+                      }`}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="truncate text-sm font-semibold">{opt.name}</span>
+                        {opt.status !== 'live' && <Chip tone="gray">Preview</Chip>}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-bitcoin">
+                        {formatApyPercent(liveApyPercent[opt.id] ?? opt.apy)} APY
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-center text-xs text-zinc-500">
+                {numericAmount > 0 ? (
+                  <>
+                    Earn about{' '}
+                    <span className="font-mono text-zinc-300">{monthlyEarnings.toFixed(8)} BTC</span> per month
+                  </>
+                ) : (
+                  <>Paid in Bitcoin, {apyIsLive ? 'live rate' : 'current rate'}</>
+                )}
+              </p>
+              {zestNearZero && <p className="mt-2 text-center text-[11px] leading-snug text-amber-400/90">{ZEST_NEAR_ZERO_NOTE}</p>}
+            </div>
+
+            <div className="mt-auto pt-4">
+              <Keypad onKey={pressKey} active={onAmountStep} />
+            </div>
+          </motion.div>
+        )}
+
+        {step === 'confirm' && (
+          <motion.div key="confirm" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="space-y-5">
+            <div className="pt-2 text-center">
+              <p className="text-sm text-zinc-500">You deposit</p>
+              <p className="mt-1 font-display text-4xl font-bold tabular-nums tracking-tight">
+                <AnimatedNumber value={numericAmount} formatter={(n) => n.toFixed(8)} />
+                <span className="ml-2 text-lg font-semibold text-zinc-500">BTC</span>
+              </p>
+            </div>
+
+            <div className="divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface">
+              <SummaryRow label="Route">{selectedStrategyOption.name}</SummaryRow>
+              <SummaryRow label="Rate">
+                <span className="text-bitcoin">
+                  {formatApyPercent(apy)} APY{apyIsLive ? ' (live)' : ''}
+                </span>
+              </SummaryRow>
+              <SummaryRow label="Est. monthly earnings">
+                <span className="font-mono">~{monthlyEarnings.toFixed(8)} BTC</span>
+              </SummaryRow>
+              <SummaryRow label="Network fee">
+                <span className="text-emerald-400">Free (sponsored)</span>
+              </SummaryRow>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-2xl border border-line bg-surface p-4 text-xs text-zinc-400">
+              <div className="mt-0.5 rounded-md bg-bitcoin/10 p-1 text-bitcoin">
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+              </div>
+              <div>
+                <p className="font-semibold text-white">Zero gas fees</p>
+                <p className="mt-0.5 leading-relaxed">
+                  This transaction is fully sponsored. You do not need to hold or spend STX to pay for Stacks network
+                  transaction fees.
+                </p>
+                <p className="mt-1.5 leading-relaxed text-zinc-500">
+                  Sponsorship is part of early access and won&rsquo;t run forever, so at some point network fees become
+                  yours to cover. Even then you won&rsquo;t need to hold STX, just a small fee settled in sBTC or taken
+                  from the yield you&rsquo;ve already earned.
+                </p>
+              </div>
+            </div>
+
+            {/* Risk & disclosures: honest statement of what this deposit does today */}
+            <details open className="group rounded-2xl border border-amber-500/20 bg-surface p-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <svg className="h-4 w-4 text-amber-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
                   </svg>
-                </div>
-                <p className="text-zinc-400 text-sm leading-relaxed">
-                  We couldn&apos;t load your balance just now. This is a network hiccup, not a
-                  problem with your wallet. Your sBTC is safe.
-                </p>
-                <PrimaryButton onClick={refreshBalance} className="px-6 py-2.5 text-sm">
-                  Retry
-                </PrimaryButton>
-              </motion.div>
-            )}
-
-            {isConnected && step === 'amount' && balanceSats !== null && (
-              <motion.div
-                key="amount"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={fadeSlideUp}
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 space-y-6"
-              >
-                <div>
-                  <p className="text-zinc-500 text-sm uppercase tracking-widest mb-2">
-                    Available Balance
-                  </p>
-                  <div className="flex items-baseline justify-between">
-                    <p className="font-display text-4xl font-bold">
-                      <AnimatedNumber value={balanceBtc} formatter={(n) => n.toFixed(8)} /> BTC
-                    </p>
-                    <a
-                      href={SBTC_ACQUIRE_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-bitcoin border border-bitcoin/20 hover:bg-bitcoin/10 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer"
-                    >
-                      Get sBTC ↗
-                    </a>
-                  </div>
-                </div>
-
-                {balanceSats === 0n ? (
-                  <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-xl p-6 text-center space-y-4">
-                    <div className="text-bitcoin w-fit p-3 rounded-full bg-bitcoin/10 mx-auto">
-                      <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286Zm0 13.036h.008v.008H12v-.008Z" />
-                      </svg>
-                    </div>
-                    <p className="text-zinc-400 text-sm leading-relaxed">
-                      You don&apos;t have any sBTC in this wallet yet. sBTC is 1:1 Bitcoin-backed.
-                      Get some via the {NETWORK_NAME === 'mainnet' ? 'official sBTC bridge (send BTC, receive sBTC at this wallet, usually about 20 to 40 minutes)' : 'Hiro testnet faucet'},
-                      then come back and refresh.
-                    </p>
-                    <a
-                      href={SBTC_ACQUIRE_URL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block"
-                    >
-                      <PrimaryButton className="px-6 py-2.5 text-sm w-full">
-                        {NETWORK_NAME === 'mainnet' ? 'Open sBTC Bridge ↗' : 'Open Testnet Faucet ↗'}
-                      </PrimaryButton>
-                    </a>
-                    <button
-                      onClick={refreshBalance}
-                      className="text-zinc-400 hover:text-white text-sm cursor-pointer transition-colors"
-                    >
-                      I&apos;ve got sBTC, refresh balance
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-2">
-                      <label htmlFor="amount" className="block text-sm text-zinc-400">
-                        Amount to deposit
-                      </label>
-                      <div className="flex items-center gap-2 bg-black border border-zinc-800 rounded-xl px-4 py-3.5 transition-all duration-200 focus-within:border-bitcoin focus-within:shadow-[0_0_0_3px_rgba(247,147,26,0.15)]">
-                        <input
-                          id="amount"
-                          type="number"
-                          step="0.00000001"
-                          min="0"
-                          value={amount}
-                          onChange={(e) => setAmount(e.target.value)}
-                          className="bg-transparent flex-1 outline-none text-lg font-mono"
-                        />
-                        <span className="text-zinc-500 font-mono text-sm">BTC</span>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setAmount(balanceBtc.toFixed(8))}
-                        className="text-bitcoin text-sm hover:underline cursor-pointer"
-                      >
-                        Use max
-                      </button>
-                      {overBalance && (
-                        <p className="text-red-500 text-sm mt-1">
-                          Amount exceeds your available balance.
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <label className="block text-sm text-zinc-400">
-                        Select Yield Strategy
-                      </label>
-                      <div className="grid grid-cols-1 gap-3">
-                        {STRATEGY_OPTIONS.map((opt) => (
-                          <div
-                            key={opt.id}
-                            onClick={() => !opt.disabled && setSelectedStrategy(opt.id)}
-                            aria-disabled={opt.disabled}
-                            className={`glow-card border rounded-xl p-4 flex items-center justify-between transition-all duration-200 ${
-                              opt.disabled
-                                ? 'opacity-50 cursor-not-allowed bg-black border-zinc-800'
-                                : selectedStrategy === opt.id
-                                ? 'cursor-pointer bg-bitcoin/5 border-bitcoin shadow-[0_0_15px_rgba(247,147,26,0.08)]'
-                                : 'cursor-pointer bg-black border-zinc-800 hover:border-zinc-700'
-                            }`}
-                          >
-                            <div className="space-y-1 pr-4">
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-semibold text-sm">{opt.name}</span>
-                              </div>
-                              <div className="flex items-center gap-2 flex-nowrap">
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider whitespace-nowrap ${
-                                  opt.risk === 'Low' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                                }`}>
-                                  {opt.risk} Risk
-                                </span>
-                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border whitespace-nowrap ${
-                                  opt.disabled
-                                    ? 'bg-zinc-500/10 text-zinc-500 border-zinc-500/20'
-                                    : opt.status === 'live'
-                                    ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                                    : opt.status === 'deployed'
-                                    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                                    : 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'
-                                }`}>
-                                  {opt.disabled ? 'Unavailable' : opt.status === 'live' ? 'Live' : opt.status === 'deployed' ? 'Deployed' : 'Preview'}
-                                </span>
-                              </div>
-                              <p className="text-xs text-zinc-500 leading-snug">{opt.desc}</p>
-                              {liveApyPercent[opt.id] !== undefined && liveApyPercent[opt.id]! < 0.01 && (
-                                <p className="text-[11px] text-amber-400/90 leading-snug">{ZEST_NEAR_ZERO_NOTE}</p>
-                              )}
-                              <div className="flex flex-wrap gap-x-3 gap-y-0.5">
-                                {strategyContractId(opt.id) && (
-                                  <a
-                                    href={explorerContractUrl(strategyContractId(opt.id)!)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-block text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline"
-                                  >
-                                    Verify contract on-chain ↗
-                                  </a>
-                                )}
-                                {PROTOCOL_LINKS[opt.id] && (
-                                  <a
-                                    href={PROTOCOL_LINKS[opt.id]}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    onClick={(e) => e.stopPropagation()}
-                                    className="inline-block text-[11px] text-zinc-500 hover:text-zinc-300 hover:underline"
-                                  >
-                                    About {opt.targetProtocol} ↗
-                                  </a>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <span className="font-display text-lg font-bold text-bitcoin whitespace-nowrap">
-                                {formatApyPercent(liveApyPercent[opt.id] ?? opt.apy)} APY
-                              </span>
-                              <p className="text-[10px] text-zinc-500 uppercase tracking-widest">
-                                {liveApyPercent[opt.id] !== undefined ? 'Live rate · ' : ''}
-                                {opt.status === 'preview' ? 'Models' : 'Routes to'} {opt.targetProtocol}
-                              </p>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Educational Trust Anchor (Inline FAQ Tooltip) */}
-                    <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-4 text-xs text-zinc-400 space-y-2">
-                      <p className="font-semibold text-white flex items-center gap-1.5">
-                        <svg className="w-4 h-4 text-bitcoin" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
-                        </svg>
-                        Backed 1:1 by real Bitcoin
-                      </p>
-                      <p className="leading-relaxed">
-                        sBTC is backed 1:1 by BTC held by the sBTC signers on Bitcoin. BitYield runs no bridge of its own, and you keep your sBTC under your own keys until you deposit.
-                      </p>
-                    </div>
-
-                    <PrimaryButton
-                      onClick={() => setStep('confirm')}
-                      disabled={numericAmount <= 0 || overBalance || selectedStrategyOption.disabled}
-                      className="w-full px-6 py-4 text-lg"
-                    >
-                      Continue
-                    </PrimaryButton>
-                  </>
+                  Risk &amp; disclosures
+                </span>
+                <span className="text-xs font-normal text-zinc-500 group-open:hidden">Show</span>
+                <span className="hidden text-xs font-normal text-zinc-500 group-open:inline">Hide</span>
+              </summary>
+              <ul className="mt-3 list-disc space-y-2 pl-4 text-xs leading-relaxed text-zinc-400">
+                <li>
+                  <span className="font-medium text-zinc-300">
+                    {selectedStrategyOption.status === 'live' ? 'Live route.' : selectedStrategyOption.status === 'deployed' ? 'Deployed, untested route.' : 'Preview strategy.'}
+                  </span>{' '}
+                  {selectedStrategyOption.riskNote}
+                </li>
+                <li>
+                  <span className="font-medium text-zinc-300">Custody.</span> Your sBTC is transferred to the strategy
+                  contract and recorded to your address. Only you can withdraw your position, principal plus accrued yield.
+                </li>
+                <li>
+                  <span className="font-medium text-zinc-300">Smart-contract risk.</span> These contracts are running on
+                  {NETWORK_NAME === 'mainnet' ? ' mainnet' : ' Stacks testnet'} and are not yet independently audited. Deposit only what you are comfortable testing with.
+                </li>
+                <li>
+                  <span className="font-medium text-zinc-300">Admin key risk.</span> One owner key controls these
+                  contracts and has emergency functions that can move the funds they hold. Ownership moves to a
+                  multisig before any public launch.
+                </li>
+                <li>
+                  <span className="font-medium text-zinc-300">sBTC peg risk.</span> sBTC is backed 1:1 by BTC held by the sBTC
+                  signers. BitYield runs no bridge of its own, but the peg depends on those signers and the official bridge.
+                </li>
+              </ul>
+              <div className="flex flex-wrap gap-x-4 gap-y-1 pt-3">
+                {strategyContractId(selectedStrategy) && (
+                  <a href={explorerContractUrl(strategyContractId(selectedStrategy)!)} target="_blank" rel="noopener noreferrer" className="text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline">
+                    Verify strategy contract ↗
+                  </a>
                 )}
-              </motion.div>
-            )}
+                {YIELD_ROUTER && (
+                  <a href={explorerContractUrl(toContractId(YIELD_ROUTER))} target="_blank" rel="noopener noreferrer" className="text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline">
+                    Verify router contract ↗
+                  </a>
+                )}
+                {PROTOCOL_LINKS[selectedStrategy] && (
+                  <a href={PROTOCOL_LINKS[selectedStrategy]} target="_blank" rel="noopener noreferrer" className="text-[11px] text-zinc-500 hover:text-zinc-300 hover:underline">
+                    About {selectedStrategyOption.targetProtocol} ↗
+                  </a>
+                )}
+              </div>
+            </details>
+          </motion.div>
+        )}
 
+        {step === 'pending' && (
+          <motion.div key="pending" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="flex flex-1 flex-col">
+            <PendingCard
+              phase={phase}
+              explorerUrl={txid ? explorerTxUrl(txid) : undefined}
+              footer={`${numericAmount.toFixed(8)} BTC → ${formatApyPercent(apy)} APY on ${selectedStrategyOption.name}`}
+            />
+          </motion.div>
+        )}
 
-            {step === 'confirm' && (
-              <motion.div
-                key="confirm"
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                variants={fadeSlideUp}
-                className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8"
-              >
-                <p className="text-zinc-500 text-sm uppercase tracking-widest mb-6">
-                  Review Deposit
+        {step === 'success' && (
+          <motion.div key="success" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="flex flex-1 flex-col">
+            <SuccessCard
+              title="You're now earning"
+              description={`${formatApyPercent(apy)} APY on ${satsToBtc(BigInt(depositedSats)).toFixed(8)} BTC with ${selectedStrategyOption.name}, paid in Bitcoin.`}
+              onDone={() => router.push('/dashboard')}
+              doneLabel="Back to Home"
+              explorerUrl={txid ? explorerTxUrl(txid) : undefined}
+            >
+              <div className="mb-6 divide-y divide-line overflow-hidden rounded-2xl border border-line bg-surface text-left">
+                <SummaryRow label="Deposited">
+                  <span className="font-mono">{satsToBtc(BigInt(depositedSats)).toFixed(8)} BTC</span>
+                </SummaryRow>
+                <SummaryRow label="Route">{selectedStrategyOption.name}</SummaryRow>
+                <SummaryRow label="Still in wallet">
+                  <span className="font-mono">{balanceBtc.toFixed(8)} BTC</span>
+                </SummaryRow>
+              </div>
+              {process.env.NEXT_PUBLIC_FEEDBACK_FORM_URL && (
+                <p className="mb-2 text-center text-sm text-zinc-500">
+                  <a href={process.env.NEXT_PUBLIC_FEEDBACK_FORM_URL} target="_blank" rel="noopener noreferrer" className="text-bitcoin/90 hover:text-bitcoin hover:underline">
+                    Got 2 minutes? Tell us how this felt →
+                  </a>
                 </p>
+              )}
+            </SuccessCard>
+          </motion.div>
+        )}
 
-                <motion.div
-                  initial="initial"
-                  animate="animate"
-                  variants={staggerContainer}
-                  className="space-y-4 mb-8"
-                >
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">You deposit</span>
-                    <span className="font-display text-2xl font-bold">
-                      <AnimatedNumber value={numericAmount} formatter={(n) => n.toFixed(8)} /> BTC
-                    </span>
-                  </motion.div>
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">Yield strategy</span>
-                    <span className="font-semibold">{selectedStrategyOption.name}</span>
-                  </motion.div>
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">Yield rate</span>
-                    <span className="text-bitcoin font-semibold">
-                      {formatApyPercent(apy)} APY{apyIsLive ? ' (live)' : ''}, paid in Bitcoin
-                    </span>
-                  </motion.div>
-                  <motion.div variants={fadeSlideUp} className="flex justify-between items-baseline">
-                    <span className="text-zinc-400">Est. monthly earnings</span>
-                    <span className="font-mono">
-                      ~<AnimatedNumber value={monthlyEarnings} formatter={(n) => n.toFixed(8)} /> BTC
-                    </span>
-                  </motion.div>
-                </motion.div>
-
-                {/* Educational Trust Anchor for Sponsored gas */}
-                <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-4 text-xs text-zinc-400 flex items-start gap-3 mb-8">
-                  <div className="text-bitcoin p-1 bg-bitcoin/10 rounded-md mt-0.5">
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="font-semibold text-white">Zero Gas Fees</p>
-                    <p className="leading-relaxed mt-0.5">
-                      This transaction is fully sponsored. You do not need to hold or spend STX to pay for Stacks network transaction fees.
-                    </p>
-                    <p className="leading-relaxed mt-1.5 text-zinc-500">
-                      Sponsorship is part of early access and won&rsquo;t run forever, so at some point network fees become yours to cover. Even then you won&rsquo;t need to hold STX, just a small fee settled in sBTC or taken from the yield you&rsquo;ve already earned.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Risk & disclosures: honest statement of what this deposit does today */}
-                <div className="bg-zinc-950 border border-amber-500/20 rounded-xl p-4 mb-8 space-y-3">
-                  <p className="font-semibold text-white text-sm flex items-center gap-1.5">
-                    <svg className="w-4 h-4 text-amber-400" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                    </svg>
-                    Risk &amp; disclosures
-                  </p>
-                  <ul className="text-xs text-zinc-400 space-y-2 leading-relaxed list-disc pl-4">
-                    <li>
-                      <span className="text-zinc-300 font-medium">
-                        {selectedStrategyOption.status === 'live' ? 'Live route.' : selectedStrategyOption.status === 'deployed' ? 'Deployed, untested route.' : 'Preview strategy.'}
-                      </span>{' '}
-                      {selectedStrategyOption.riskNote}
-                    </li>
-                    <li>
-                      <span className="text-zinc-300 font-medium">Custody.</span> Your sBTC is transferred to the strategy
-                      contract and recorded to your address. Only you can withdraw your position, principal plus accrued yield.
-                    </li>
-                    <li>
-                      <span className="text-zinc-300 font-medium">Smart-contract risk.</span> These contracts are running on
-                      {NETWORK_NAME === 'mainnet' ? ' mainnet' : ' Stacks testnet'} and are not yet independently audited. Deposit only what you are comfortable testing with.
-                    </li>
-                    <li>
-                      <span className="text-zinc-300 font-medium">Admin key risk.</span> One owner key controls these
-                      contracts and has emergency functions that can move the funds they hold. Ownership moves to a
-                      multisig before any public launch.
-                    </li>
-                    <li>
-                      <span className="text-zinc-300 font-medium">sBTC peg risk.</span> sBTC is backed 1:1 by BTC held by the sBTC
-                      signers. BitYield runs no bridge of its own, but the peg depends on those signers and the official bridge.
-                    </li>
-                  </ul>
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 pt-1">
-                    {strategyContractId(selectedStrategy) && (
-                      <a
-                        href={explorerContractUrl(strategyContractId(selectedStrategy)!)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline"
-                      >
-                        Verify strategy contract ↗
-                      </a>
-                    )}
-                    {YIELD_ROUTER && (
-                      <a
-                        href={explorerContractUrl(toContractId(YIELD_ROUTER))}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] text-bitcoin/80 hover:text-bitcoin hover:underline"
-                      >
-                        Verify router contract ↗
-                      </a>
-                    )}
-                    {PROTOCOL_LINKS[selectedStrategy] && (
-                      <a
-                        href={PROTOCOL_LINKS[selectedStrategy]}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-[11px] text-zinc-500 hover:text-zinc-300 hover:underline"
-                      >
-                        About {selectedStrategyOption.targetProtocol} ↗
-                      </a>
-                    )}
-                  </div>
-                </div>
-
-                <div className="flex gap-3">
-                  <SecondaryButton onClick={() => setStep('amount')} className="flex-1 px-6 py-4">
-                    Back
-                  </SecondaryButton>
-                  <PrimaryButton onClick={handleConfirm} className="flex-1 px-6 py-4">
-                    Confirm Deposit
-                  </PrimaryButton>
-                </div>
-              </motion.div>
-            )}
-
-            {step === 'pending' && (
-              <motion.div key="pending" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <PendingCard
-                  phase={phase}
-                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
-                  footer={`${numericAmount.toFixed(8)} BTC → earning ${formatApyPercent(apy)} APY on ${selectedStrategyOption.name}`}
-                />
-              </motion.div>
-            )}
-
-            {step === 'success' && (
-              <motion.div key="success" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <SuccessCard
-                  title="You're now earning"
-                  description={`${formatApyPercent(apy)} APY on ${satsToBtc(BigInt(depositedSats)).toFixed(8)} BTC with ${selectedStrategyOption.name}, paid in Bitcoin.`}
-                  onDone={() => router.push('/dashboard')}
-                  doneLabel="View dashboard"
-                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
-                >
-                  <div className="bg-black border border-zinc-800 rounded-xl p-6 mb-8 text-center sm:text-left">
-                    <p className="text-zinc-500 text-sm uppercase tracking-widest mb-2">
-                      Available Balance
-                    </p>
-                    <p className="font-display text-3xl font-bold">
-                      <AnimatedNumber value={balanceBtc} formatter={(n) => n.toFixed(8)} /> BTC
-                    </p>
-                    <p className="text-zinc-500 text-sm mt-3">
-                      <Link href="/dashboard" className="text-bitcoin hover:underline font-semibold">
-                        View positions on your dashboard →
-                      </Link>
-                    </p>
-                  </div>
-                  {process.env.NEXT_PUBLIC_FEEDBACK_FORM_URL && (
-                    <p className="text-zinc-500 text-sm text-center mb-2">
-                      <a
-                        href={process.env.NEXT_PUBLIC_FEEDBACK_FORM_URL}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-bitcoin/90 hover:text-bitcoin hover:underline"
-                      >
-                        Got 2 minutes? Tell us how this felt →
-                      </a>
-                    </p>
-                  )}
-                </SuccessCard>
-              </motion.div>
-            )}
-
-            {step === 'error' && (
-              <motion.div key="error" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp}>
-                <ErrorCard
-                  title="We couldn't confirm your deposit"
-                  description={
-                    errorMessage ?? 'Something went wrong. Your sBTC has not moved. Please try again.'
-                  }
-                  onCancel={() => setStep('amount')}
-                  onRetry={() => setStep('confirm')}
-                  explorerUrl={txid ? explorerTxUrl(txid) : undefined}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </main>
-    </div>
+        {step === 'error' && (
+          <motion.div key="error" initial="initial" animate="animate" exit="exit" variants={fadeSlideUp} className="flex flex-1 flex-col">
+            <ErrorCard
+              title="We couldn't confirm your deposit"
+              description={errorMessage ?? 'Something went wrong. Your sBTC has not moved. Please try again.'}
+              onCancel={() => setStep('amount')}
+              onRetry={() => setStep('confirm')}
+              explorerUrl={txid ? explorerTxUrl(txid) : undefined}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </FlowShell>
   );
 }
 
 export default function DepositPage() {
   return (
-    <Suspense fallback={<div className="bg-[#0a0a0a] min-h-screen" />}>
+    <Suspense fallback={<div className="min-h-dvh bg-[#0a0a0a]" />}>
       <DepositInner />
     </Suspense>
   );

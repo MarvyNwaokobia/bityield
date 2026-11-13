@@ -114,3 +114,13 @@ export function TxRow({ tx }: { tx: RouterTx }) {
     </a>
   );
 }
+
+/** One label/value line inside a divided summary card. */
+export function SummaryRow({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 px-4 py-3.5">
+      <span className="text-sm text-zinc-400">{label}</span>
+      <span className="text-right text-sm font-medium">{children}</span>
+    </div>
+  );
+}
