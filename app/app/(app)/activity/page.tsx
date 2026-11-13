@@ -24,7 +24,7 @@ export default function ActivityPage() {
   };
 
   return (
-    <motion.div initial="initial" animate="animate" variants={fadeSlideUp}>
+    <motion.div initial="initial" animate="animate" variants={fadeSlideUp} className="xl:mx-auto xl:max-w-3xl">
       <PageTitle sub="Every deposit and withdrawal, straight from the chain.">Activity</PageTitle>
 
       {!isConnected && <ConnectPrompt description="Connect your wallet to see your activity." />}

@@ -111,7 +111,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         <ConnectWalletButton />
       </header>
       <main className="md:pl-60">
-        <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-28 md:px-8 md:pt-10 md:pb-16">{children}</div>
+        <div className="mx-auto w-full max-w-2xl px-4 pt-6 pb-28 md:max-w-3xl md:px-8 md:pt-10 md:pb-16 xl:max-w-6xl xl:px-12">{children}</div>
       </main>
       <BottomNav />
     </div>

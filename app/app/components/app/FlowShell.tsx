@@ -49,7 +49,7 @@ export function FlowShell({
     'flex h-10 w-10 items-center justify-center rounded-full text-zinc-300 transition-colors hover:bg-surface-2 hover:text-white';
   return (
     <div className="flex min-h-dvh flex-col bg-[#0a0a0a] text-white">
-      <header className="sticky top-0 z-30 bg-[#0a0a0a]/90 backdrop-blur-lg">
+      <header className="sticky top-0 z-30 bg-[#0a0a0a]/90 backdrop-blur-lg md:static md:pt-4">
         <div className="mx-auto grid w-full max-w-md grid-cols-[2.5rem_1fr_2.5rem] items-center px-3 py-3">
           {onBack && !close ? (
             <button type="button" onClick={onBack} aria-label="Back" className={buttonClass}>
@@ -72,13 +72,16 @@ export function FlowShell({
         ) : null}
       </header>
 
-      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pt-4 pb-6">{children}</main>
+      {/* Phone: edge to edge. Desktop: a centered card so the flow doesn't float in a void. */}
+      <div className="mx-auto flex w-full max-w-md flex-1 flex-col md:my-6 md:flex-none md:rounded-3xl md:border md:border-line md:bg-surface md:shadow-2xl md:shadow-black/40">
+        <main className="flex flex-1 flex-col px-4 pt-4 pb-6 md:min-h-[34rem] md:px-8 md:pt-6">{children}</main>
 
-      {footer && (
-        <div className="sticky bottom-0 z-30 border-t border-line bg-[#0a0a0a]/95 backdrop-blur-lg safe-bottom">
-          <div className="mx-auto w-full max-w-md px-4 py-3">{footer}</div>
-        </div>
-      )}
+        {footer && (
+          <div className="sticky bottom-0 z-30 border-t border-line bg-[#0a0a0a]/95 backdrop-blur-lg safe-bottom md:static md:rounded-b-3xl md:border-0 md:bg-transparent md:px-4 md:pb-4 md:backdrop-blur-none">
+            <div className="px-4 py-3 md:px-4">{footer}</div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

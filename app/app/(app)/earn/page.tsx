@@ -19,7 +19,7 @@ export default function EarnPage() {
         </PageTitle>
       </motion.div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 xl:grid xl:grid-cols-3 xl:items-start xl:gap-5 xl:space-y-0">
         {STRATEGY_OPTIONS.map((s) => {
           const live = s.status === 'live';
           const rate = liveApy[s.id] ?? s.apy;

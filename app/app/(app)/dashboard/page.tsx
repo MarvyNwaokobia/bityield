@@ -54,7 +54,8 @@ export default function HomePage() {
   const recent = (d.activity ?? []).slice(0, 4);
 
   return (
-    <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-8">
+    <motion.div variants={staggerContainer} initial="initial" animate="animate" className="space-y-8 xl:grid xl:grid-cols-[minmax(0,1fr)_26rem] xl:items-start xl:gap-10 xl:space-y-0">
+      <div className="space-y-8 xl:rounded-3xl xl:border xl:border-line xl:bg-surface xl:p-10 xl:pt-12">
       {/* Balance hero */}
       <motion.section variants={fadeSlideUp} className="pt-2 text-center">
         <p className="text-sm text-zinc-500">Total balance</p>
@@ -99,7 +100,7 @@ export default function HomePage() {
 
       {/* Split */}
       <motion.section variants={fadeSlideUp} className="grid grid-cols-2 gap-3">
-        <Card className="p-4">
+        <Card className="p-4 xl:bg-surface-2">
           <p className="text-xs text-zinc-500">In wallet</p>
           {d.balanceError ? (
             <button
@@ -116,7 +117,7 @@ export default function HomePage() {
             <p className="mt-1 font-mono text-base tabular-nums">{formatBtc(d.balanceSats)}</p>
           )}
         </Card>
-        <Card className="p-4">
+        <Card className="p-4 xl:bg-surface-2">
           <p className="text-xs text-zinc-500">Earning</p>
           {d.positions === null ? (
             <Skeleton className="mt-2 h-6 w-24" />
@@ -126,6 +127,9 @@ export default function HomePage() {
         </Card>
       </motion.section>
 
+      </div>
+
+      <div className="space-y-8">
       {/* Positions */}
       {d.positions && d.positions.length === 0 && (
         <motion.section variants={fadeSlideUp}>
@@ -194,6 +198,7 @@ export default function HomePage() {
           </Card>
         </motion.section>
       )}
+    </div>
     </motion.div>
   );
 }

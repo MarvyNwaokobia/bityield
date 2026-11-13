@@ -39,7 +39,7 @@ export default function AccountPage() {
   };
 
   return (
-    <motion.div initial="initial" animate="animate" variants={fadeSlideUp} className="space-y-6">
+    <motion.div initial="initial" animate="animate" variants={fadeSlideUp} className="space-y-6 xl:mx-auto xl:max-w-2xl">
       <PageTitle>Account</PageTitle>
 
       {!isConnected || !address ? (
